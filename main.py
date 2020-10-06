@@ -7,7 +7,6 @@ from os.path import join
 from explearner import *
 
 
-# TODO convert to sklearn's GPs + perhaps gpflow Gram matrices
 # TODO write ModelBasedDataset with mixins for trees, linear models, and
 # non-linear model + LIME or SENN
 
