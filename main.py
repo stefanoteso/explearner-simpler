@@ -32,28 +32,31 @@ DATASETS = {
 def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
     rng = check_random_state(rng)
 
-    gp = CGPUCB(dataset, strategy=args.strategy, rng=rng)
+    gp = CGPUCB(strategy=args.strategy, random_state=rng)
 
     trace = []
     fhat = np.zeros_like(dataset.f)
     for t in range(args.n_iters):
 
         # Fit the GP on the observed data
-        gp.X = gp.concat(dataset.X[kn], dataset.Z[kn], dataset.y[kn].reshape(-1, 1))
-        gp.Y = fhat[kn]
+        gp.fit(dataset.X[kn],
+               dataset.Z[kn],
+               dataset.y[kn],
+               fhat[kn])
 
         # Select query
         i = rng.choice(tr)
         kn, tr = move_indices(kn, tr, [i])
 
         # Select an arm and observe the reward
-        zhat, yhat = gp.select_arm(dataset, dataset.X[i])
+        # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
+        zhat, yhat = gp.select_arm(dataset, dataset.X[i], beta=1)
         fhat[i] = dataset.reward(i, zhat, yhat, noise=args.noise)
 
         # Predict and compute the regret
         # XXX I am distinguishing between query and prediction so that random
         # selection and UCB can be compared fairly
-        zpred, ypred = gp.predict(dataset, dataset.X[i])
+        zpred, ypred = gp.predict_arm(dataset, dataset.X[i])
         regret = dataset.f[i] - dataset.reward(i, zpred, ypred, noise=0)
         print(f'iter {t:2d}:  regret={regret:5.3f} true={dataset.y[i]} pred={ypred}')
         trace.append(regret)

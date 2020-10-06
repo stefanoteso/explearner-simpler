@@ -1,46 +1,49 @@
 import numpy as np
 
-from sklearn.utils import check_random_state
+from sklearn.gaussian_process import GaussianProcessRegressor as GPR
 
 
-class CGPUCB:
-   # TODO convert to sklearn GaussianProcessRegressor
-
-    def __init__(self, dataset, strategy='random', rng=None):
-        self.rng = check_random_state(rng)
+class CGPUCB(GPR):
+    def __init__(self, **kwargs):
+        strategy = kwargs.pop('strategy', 'random')
         self.select_arm = {
             'random': self._select_arm_at_random,
             'ucb': self._select_arm_by_ucb,
         }[strategy]
+        super().__init__(**kwargs)
 
-        D = self.concat(dataset.X, dataset.Z, dataset.y.reshape(-1, 1))
-        super().__init__((D, dataset.f), dataset.kernel)
+    def fit(self, X, Z, y, f):
+        """Wrapper around GaussianProcessRefressor.fit."""
+        D = np.concatenate((X, Z, y.reshape(-1, 1)), axis=1)
+        return super().fit(D, f)
 
-    @staticmethod
-    def concat(X, Z, Y):
-        return np.concatenate((X, Z, Y), axis=1)
+    def predict(self, X, Z, y, **kwargs):
+        """Wrapper around GaussianProcessRefressor.predict."""
+        D = np.concatenate((X, Z, y.reshape(-1, 1)), axis=1)
+        return super().predict(D, **kwargs)
 
-    def predict_reward(self, x, z, y):
-        """Computes the mean reward and std. dev. for (x, z, y)."""
-        x = np.expand_dims(x, axis=0)
-        z = np.expand_dims(z, axis=0)
-        y = np.array([[y]])
-        mean, var = super().predict_y(self.concat(x, z, y))
-        return mean.numpy(), var.numpy()
-
-    def predict(self, dataset, x):
+    def predict_arm(self, dataset, x):
         """Returns the best arm for context x."""
-        return max(dataset.arms, key=lambda arm: self.predict_reward(x, *arm))
+        x = x[:, None]
 
-    def ucb(self, x, z, y, beta_t=1):
-        """Computes the upper confidence bound of (x, z, y)."""
-        mean, var = self.predict_reward(x, z, y)
-        return (mean + np.sqrt(beta_t) * var)[0][0]
+        def mean_reward(arm):
+            z, y = arm
+            return self.predict(x, z[:, None], y[None, None])[0]
 
-    def _select_arm_at_random(self, dataset, x):
-        """Returns a random arm."""
-        return dataset.arms[self.rng.choice(len(dataset.arms))]
+        return max(dataset.arms, key=mean_reward)
 
-    def _select_arm_by_ucb(self, dataset, x):
+    def _select_arm_by_ucb(self, dataset, x, beta=1.0):
         """Returns the arm that maximizes the UCB of x."""
-        return max(dataset.arms, key=lambda arm: self.ucb(x, *arm))
+        x = x[:, None]
+
+        def ucb(arm):
+            z, y = arm
+            mean, std = self.predict(x, z[:, None], y[None, None],
+                                     return_std=True)
+            return mean[0] + np.sqrt(beta) * std[0]
+
+        return max(dataset.arms, key=ucb)
+
+    def _select_arm_at_random(self, dataset, x, beta=1.0):
+        """Returns a random arm."""
+        return dataset.arms[self.random_state.choice(len(dataset.arms))]

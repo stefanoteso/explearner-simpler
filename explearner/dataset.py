@@ -81,14 +81,14 @@ class SineDataset(Dataset):
         Z = -np.cos(X * 0.5) # XXX really?
         y = np.sin(X * 0.5).ravel()
 
-        kx = gpflow.kernels.RBF(active_dims=[0])
-        kz = gpflow.kernels.Cosine(active_dims=[1])
-        ky = gpflow.kernels.Linear(active_dims=[2])
+        #kx = gpflow.kernels.RBF(active_dims=[0])
+        #kz = gpflow.kernels.Cosine(active_dims=[1])
+        #ky = gpflow.kernels.Linear(active_dims=[2])
 
         arms_z = list(np.arange(-2, 2, 0.05).reshape(-1, 1))
         arms_y = list(np.arange(-2, 2, 0.05))
         arms = list(product(arms_z, arms_y))
-        super().__init__(X, Z, y, (kx, kz, ky), arms, **kwargs)
+        super().__init__(X, Z, y, [0, 0, 0], arms, **kwargs)
 
     def reward(self, i, zhat, yhat, noise=0):
         x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
@@ -129,12 +129,12 @@ class ColorsDataset(Dataset):
             Z = np.array([self._explain(x) for x in X])
             dump(path, (X, Z, y))
 
-        kx = gpflow.kernels.RBF(active_dims=list(range(0, 25)))
-        kz = gpflow.kernels.RBF(active_dims=list(range(25, 50)))
-        ky = gpflow.kernels.Linear(active_dims=[50])
+        #kx = gpflow.kernels.RBF(active_dims=list(range(0, 25)))
+        #kz = gpflow.kernels.RBF(active_dims=list(range(25, 50)))
+        #ky = gpflow.kernels.Linear(active_dims=[50])
 
         arms = self._enumerate_arms()
-        super().__init__(X, Z, y, (kx, kz, ky), arms, **kwargs)
+        super().__init__(X, Z, y, [0, 0, 0], arms, **kwargs)
 
     @staticmethod
     def _img_to_x(img):
