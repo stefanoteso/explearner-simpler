@@ -124,7 +124,6 @@ def main():
     np.set_printoptions(precision=3, linewidth=80)
 
     np.random.seed(args.seed) # XXX just in case
-    tf.random.set_seed(args.seed)
     rng = np.random.RandomState(args.seed)
 
     dataset = DATASETS[args.dataset](combiner=args.combiner, rng=rng)
