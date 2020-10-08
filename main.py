@@ -31,7 +31,9 @@ DATASETS = {
 def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
     rng = check_random_state(rng)
 
-    gp = CGPUCB(strategy=args.strategy, random_state=rng)
+    gp = CGPUCB(kernel=dataset.kernel,
+                strategy=args.strategy,
+                random_state=rng)
 
     trace = []
     fhat = np.zeros_like(dataset.f)
@@ -122,7 +124,7 @@ def main():
 
     args = parser.parse_args()
 
-    np.seterr(all='raise')
+    #np.seterr(all='raise') # XXX the RBF kernel underflows often
     np.set_printoptions(precision=3, linewidth=80)
 
     np.random.seed(args.seed) # XXX just in case

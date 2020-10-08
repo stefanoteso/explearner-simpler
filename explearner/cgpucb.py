@@ -13,12 +13,12 @@ class CGPUCB(GPR):
         super().__init__(**kwargs)
 
     def fit(self, X, Z, y, f):
-        """Wrapper around GaussianProcessRefressor.fit."""
+        """Wrapper around GaussianProcessRegressor.fit."""
         D = np.concatenate((X, Z, y.reshape(-1, 1)), axis=1)
         return super().fit(D, f)
 
     def predict(self, X, Z, y, **kwargs):
-        """Wrapper around GaussianProcessRefressor.predict."""
+        """Wrapper around GaussianProcessRegressor.predict."""
         D = np.concatenate((X, Z, y.reshape(-1, 1)), axis=1)
         return super().predict(D, **kwargs)
 

@@ -3,10 +3,13 @@ import numpy as np
 from abc import ABC, abstractmethod
 from sklearn.utils import check_random_state
 from sklearn.model_selection import GridSearchCV
+from sklearn.gaussian_process.kernels import RBF, DotProduct
 from scipy.stats import norm
 from scipy.spatial.distance import cosine as cosine_dist
 from itertools import product, combinations
 from os.path import join
+
+from .kernel import CombinerKernel
 
 
 class Dataset(ABC):
@@ -20,8 +23,12 @@ class Dataset(ABC):
         The explanations.
     y : ndarray of shape (n_examples,)
         The labels.
-    ks : tuple
-        The kernels over contexts, explanations, and labels.
+    kx : sklearn.gaussian_process.Kernel
+        The kernel over contexts.
+    kz : sklearn.gaussian_process.Kernel
+        The kernel over explanations.
+    ky : sklearn.gaussian_process.Kernel
+        The kernel over labels.
     arms : list of (ndarray of shape (n_exp_variables,), scalar) pairs
         The possible (explanation, label) pairs.
     combiner : str or callable, defaults to 'prod'
@@ -34,22 +41,14 @@ class Dataset(ABC):
     f : ndarray of shape (n_examples,)
         Pre-computed reward for the optimal arm (noiseless).
     """
-    def __init__(self, X, Z, y, ks, arms, combiner='prod', rng=None):
+    def __init__(self, X, Z, y, kx, kz, ky, arms, combiner='prod', rng=None):
         assert X.ndim == 2 and Z.ndim == 2 and y.ndim == 1
         assert arms[0][0].ndim == 1
         self.rng = check_random_state(rng)
 
         self.X, self.Z, self.y = X, Z, y
-        self.kx, self.kz, self.ky = ks
+        self.kernel = CombinerKernel(kx, kz, ky, combiner)
         self.arms = arms
-
-        if combiner == 'sum':
-            combiner = lambda kx, kz, ky: (kx + kz) * ky
-        elif combiner == 'prod':
-            combiner = lambda kx, kz, ky: kx * kz * ky
-        else:
-            raise ValueError(f'unknown combiner {combiner}')
-        self.kernel = combiner(self.kx, self.kz, self.ky)
 
         self.f = np.array([self.reward(i, Z[i], y[i], noise=0)
                            for i in range(self.X.shape[0])])
@@ -81,14 +80,16 @@ class SineDataset(Dataset):
         Z = -np.cos(X * 0.5) # XXX really?
         y = np.sin(X * 0.5).ravel()
 
-        #kx = gpflow.kernels.RBF(active_dims=[0])
-        #kz = gpflow.kernels.Cosine(active_dims=[1])
-        #ky = gpflow.kernels.Linear(active_dims=[2])
+        # TODO cosine kernel for z
+        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
+        kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
+        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
 
         arms_z = list(np.arange(-2, 2, 0.05).reshape(-1, 1))
         arms_y = list(np.arange(-2, 2, 0.05))
         arms = list(product(arms_z, arms_y))
-        super().__init__(X, Z, y, [0, 0, 0], arms, **kwargs)
+
+        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
     def reward(self, i, zhat, yhat, noise=0):
         x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
