@@ -32,7 +32,6 @@ DATASETS = {
 
 def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
     rng = check_random_state(rng)
-    test_indices = rng.permutation(len(dataset.X))[:10]
 
     gp = CGPUCB(kernel=dataset.kernel,
                 strategy=args.strategy,
@@ -50,11 +49,11 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
                dataset.y[kn],
                fobs[kn])
 
-        # Select query
+        # Select a context
         i = rng.choice(tr)
-        kn, tr = move_indices(kn, tr, [i])
+        kn = np.array(list(sorted(set(kn) | {i})))
 
-        # Select an arm and observe the reward
+        # Select a query arm and observe the reward
         # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
         zhat, yhat = gp.select_arm(dataset, dataset.X[i], beta=1)
         fobs[i] = dataset.reward(i, zhat, yhat, noise=args.noise)
@@ -68,13 +67,12 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 
         # Compute the average regret over the test contexts
         test_regrets = []
-        for i in test_indices:
+        for i in ts:
             zhat, yhat = gp.predict_arm(dataset, dataset.X[i])
             test_regrets.append(dataset.regret(i, zhat, yhat))
         avg_test_regret = np.mean(test_regrets)
 
         print(f'iter {t:2d}:  {regret:5.3f} {avg_test_regret:5.3f}  y: {dataset.y[i]} vs {ybest}  z: {dataset.Z[i]} vs {zbest}')
-
 
     return trace
 
@@ -86,8 +84,8 @@ def evaluate(dataset, args, rng=None):
     split = KFold(n_splits=args.n_splits, shuffle=True, random_state=rng)
     for k, (tr, ts) in enumerate(split.split(dataset.X)):
         n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
-        tr = rng.permutation(tr)
-        kn, tr = tr[:n_known], tr[n_known:]
+        kn = rng.permutation(tr)[:n_known]
+        ts = rng.permutation(ts)[:5]
         traces.append(evaluate_fold(dataset, kn, tr, ts, args, rng=rng))
 
     return traces
