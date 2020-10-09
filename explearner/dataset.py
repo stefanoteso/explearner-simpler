@@ -59,6 +59,11 @@ class Dataset(ABC):
         (x[i], z[i], y[i])."""
         pass
 
+    def regret(self, i, zhat, yhat):
+        r = self.reward(i, self.Z[i], self.y[i]) - self.reward(i, zhat, yhat)
+        assert r >= 0
+        return r
+
     def select_model(self, clf, X, y, grid):
         """Selects a model using grid search."""
         # TODO move to model-based dataset subclass
