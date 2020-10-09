@@ -42,7 +42,9 @@ class Dataset(ABC):
         Pre-computed reward for the optimal arm (noiseless).
     """
     def __init__(self, X, Z, y, kx, kz, ky, arms, combiner='prod', rng=None):
-        assert X.ndim == 2 and Z.ndim == 2 and y.ndim == 1
+        assert X.ndim == 2
+        assert Z.ndim == 2
+        assert y.ndim == 1
         assert arms[0][0].ndim == 1
         self.rng = check_random_state(rng)
 
