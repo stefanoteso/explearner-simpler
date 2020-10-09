@@ -83,14 +83,14 @@ class LineDataset(Dataset):
     def __init__(self, **kwargs):
         X = np.linspace(-1, 1, num=100).reshape(-1, 1)
         Z = np.ones((X.shape[0], 1))
-        y = np.array([np.dot(x, z) + 1 for (x, z) in zip(X, Z)])
+        y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
 
         kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
         kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
         ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
 
-        arms_z = list(np.arange(-2, 2, 0.05).reshape(-1, 1))
-        arms_y = list(np.arange(-2, 2, 0.05))
+        arms_z = list(np.linspace(-1, 1, 20).reshape(-1, 1))
+        arms_y = list(np.linspace(-1, 1, 20))
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
