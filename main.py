@@ -35,15 +35,17 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
                 strategy=args.strategy,
                 random_state=rng)
 
+    # The observed (noisy) rewards
+    fobs = np.zeros(dataset.X.shape[0])
+
     trace = []
-    fhat = np.zeros_like(dataset.f)
     for t in range(args.n_iters):
 
         # Fit the GP on the observed data
         gp.fit(dataset.X[kn],
                dataset.Z[kn],
                dataset.y[kn],
-               fhat[kn])
+               fobs[kn])
 
         # Select query
         i = rng.choice(tr)
@@ -52,14 +54,13 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
         # Select an arm and observe the reward
         # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
         zhat, yhat = gp.select_arm(dataset, dataset.X[i], beta=1)
-        fhat[i] = dataset.reward(i, zhat, yhat, noise=args.noise)
+        fobs[i] = dataset.reward(i, zhat, yhat, noise=args.noise)
 
         # Predict and compute the regret
         # XXX I am distinguishing between query and prediction so that random
         # selection and UCB can be compared fairly
-        zpred, ypred = gp.predict_arm(dataset, dataset.X[i])
-        regret = dataset.f[i] - dataset.reward(i, zpred, ypred, noise=0)
-        print(f'iter {t:2d}:  regret={regret:5.3f} true={dataset.y[i]} pred={ypred}')
+        zbest, ybest = gp.predict_arm(dataset, dataset.X[i])
+        regret = dataset.regret(i, zbest, ybest)
         trace.append(regret)
 
     return trace
