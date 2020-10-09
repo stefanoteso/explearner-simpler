@@ -63,7 +63,6 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
         # selection and UCB can be compared fairly
         zbest, ybest = gp.predict_arm(dataset, dataset.X[i])
         regret = dataset.regret(i, zbest, ybest)
-        trace.append(regret)
 
         # Compute the average regret over the test contexts
         test_regrets = []
@@ -73,6 +72,7 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
         avg_test_regret = np.mean(test_regrets)
 
         print(f'iter {t:2d}:  {regret:5.3f} {avg_test_regret:5.3f}  y: {dataset.y[i]} vs {ybest}  z: {dataset.Z[i]} vs {zbest}')
+        trace.append((regret, avg_test_regret))
 
     return trace
 
@@ -86,7 +86,7 @@ def evaluate(dataset, args, rng=None):
     for tr, ts in split.split(dataset.X):
         n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
         kn = rng.permutation(tr)[:n_known]
-        ts = rng.permutation(ts)[:5]
+        ts = rng.permutation(ts)[:20]
         folds.append((kn, tr, ts))
 
     return [evaluate_fold(dataset, kn, tr, ts, args, rng=rng)
