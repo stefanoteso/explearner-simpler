@@ -80,15 +80,17 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 def evaluate(dataset, args, rng=None):
     rng = check_random_state(rng)
 
-    traces = []
     split = KFold(n_splits=args.n_splits, shuffle=True, random_state=rng)
-    for k, (tr, ts) in enumerate(split.split(dataset.X)):
+
+    folds = []
+    for tr, ts in split.split(dataset.X):
         n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
         kn = rng.permutation(tr)[:n_known]
         ts = rng.permutation(ts)[:5]
-        traces.append(evaluate_fold(dataset, kn, tr, ts, args, rng=rng))
+        folds.append((kn, tr, ts))
 
-    return traces
+    return [evaluate_fold(dataset, kn, tr, ts, args, rng=rng)
+            for kn, tr, ts in folds]
 
 
 def _get_basename(args):
