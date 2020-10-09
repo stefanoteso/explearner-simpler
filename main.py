@@ -13,6 +13,8 @@ from explearner import *
 
 DATASETS = {
     # Datasets with ground-truth explanations
+    'line':
+        LineDataset,
     'sine':
         SineDataset,
     'colors-0':
@@ -30,6 +32,7 @@ DATASETS = {
 
 def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
     rng = check_random_state(rng)
+    test_indices = rng.permutation(len(dataset.X))[:10]
 
     gp = CGPUCB(kernel=dataset.kernel,
                 strategy=args.strategy,
@@ -62,6 +65,16 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
         zbest, ybest = gp.predict_arm(dataset, dataset.X[i])
         regret = dataset.regret(i, zbest, ybest)
         trace.append(regret)
+
+        # Compute the average regret over the test contexts
+        test_regrets = []
+        for i in test_indices:
+            zhat, yhat = gp.predict_arm(dataset, dataset.X[i])
+            test_regrets.append(dataset.regret(i, zhat, yhat))
+        avg_test_regret = np.mean(test_regrets)
+
+        print(f'iter {t:2d}:  {regret:5.3f} {avg_test_regret:5.3f}  y: {dataset.y[i]} vs {ybest}  z: {dataset.Z[i]} vs {zbest}')
+
 
     return trace
 

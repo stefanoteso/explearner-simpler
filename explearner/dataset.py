@@ -46,14 +46,12 @@ class Dataset(ABC):
         assert Z.ndim == 2
         assert y.ndim == 1
         assert arms[0][0].ndim == 1
+
         self.rng = check_random_state(rng)
 
         self.X, self.Z, self.y = X, Z, y
         self.kernel = CombinerKernel(kx, kz, ky, combiner)
         self.arms = arms
-
-        self.f = np.array([self.reward(i, Z[i], y[i], noise=0)
-                           for i in range(self.X.shape[0])])
 
     @abstractmethod
     def reward(self, i, zhat, yhat, noise=0):
@@ -80,6 +78,31 @@ class Dataset(ABC):
         return clf.best_estimator_
 
 
+class LineDataset(Dataset):
+    """Toy 1-D dataset."""
+    def __init__(self, **kwargs):
+        X = np.linspace(-1, 1, num=100).reshape(-1, 1)
+        Z = np.ones((X.shape[0], 1))
+        y = np.array([np.dot(x, z) + 1 for (x, z) in zip(X, Z)])
+
+        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
+        kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
+        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+
+        arms_z = list(np.arange(-2, 2, 0.05).reshape(-1, 1))
+        arms_y = list(np.arange(-2, 2, 0.05))
+        arms = list(product(arms_z, arms_y))
+
+        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
+
+    def reward(self, i, zhat, yhat, noise=0):
+        x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
+        reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
+        reward_y = norm(loc=y, scale=0.1).pdf(yhat)
+        #print(x, 'zs', z, zhat, reward_z, 'ys', y, yhat, reward_y)
+        return reward_z * reward_y + self.rng.normal(0, noise)
+
+
 class SineDataset(Dataset):
     """Toy 1-D dataset."""
     def __init__(self, min_x=0, max_x=30, n=1000, **kwargs):
@@ -100,8 +123,7 @@ class SineDataset(Dataset):
 
     def reward(self, i, zhat, yhat, noise=0):
         x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
-        zhat = zhat[0]
-        reward_z = norm(loc=z, scale=1).pdf(zhat)
+        reward_z = norm(loc=z, scale=1).pdf(zhat[0])
         reward_y = norm(loc=y, scale=1).pdf(yhat)
         return reward_z * reward_y + self.rng.normal(0, noise)
 
