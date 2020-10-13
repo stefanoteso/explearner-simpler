@@ -76,7 +76,16 @@ class Dataset(ABC):
         return clf.best_estimator_
 
 
-class LineDataset(Dataset):
+class NormNormRewardMixin:
+    """Implements a simple reward function for scalar explanations."""
+    def reward(self, i, zhat, yhat, noise=0):
+        x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
+        reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
+        reward_y = norm(loc=y, scale=0.1).pdf(yhat)
+        return reward_z * reward_y + self.rng.normal(0, noise)
+
+
+class LineDataset(NormNormRewardMixin, Dataset):
     """Toy 1-D dataset."""
     def __init__(self, **kwargs):
         X = np.linspace(-1, 1, num=51).reshape(-1, 1)
@@ -93,15 +102,8 @@ class LineDataset(Dataset):
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
-    def reward(self, i, zhat, yhat, noise=0):
-        x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
-        reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
-        reward_y = norm(loc=y, scale=0.1).pdf(yhat)
-        #print(x, 'zs', z, zhat, reward_z, 'ys', y, yhat, reward_y)
-        return reward_z * reward_y + self.rng.normal(0, noise)
 
-
-class SineDataset(Dataset):
+class SineDataset(NormNormRewardMixin, Dataset):
     """Toy 1-D dataset."""
     def __init__(self, **kwargs):
         X = np.linspace(0, 30, num=51).reshape(-1, 1)
@@ -118,12 +120,6 @@ class SineDataset(Dataset):
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
-
-    def reward(self, i, zhat, yhat, noise=0):
-        x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
-        reward_z = norm(loc=z, scale=1).pdf(zhat[0])
-        reward_y = norm(loc=y, scale=1).pdf(yhat)
-        return reward_z * reward_y + self.rng.normal(0, noise)
 
 
 _COLORS = [
