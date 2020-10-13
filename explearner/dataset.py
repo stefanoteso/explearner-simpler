@@ -81,7 +81,7 @@ class Dataset(ABC):
 class LineDataset(Dataset):
     """Toy 1-D dataset."""
     def __init__(self, **kwargs):
-        X = np.linspace(-1, 1, num=100).reshape(-1, 1)
+        X = np.linspace(-1, 1, num=51).reshape(-1, 1)
         Z = np.ones((X.shape[0], 1))
         y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
 
@@ -105,8 +105,8 @@ class LineDataset(Dataset):
 
 class SineDataset(Dataset):
     """Toy 1-D dataset."""
-    def __init__(self, min_x=0, max_x=30, n=1000, **kwargs):
-        X = np.random.uniform(min_x, max_x, size=n).reshape(-1, 1)
+    def __init__(self, **kwargs):
+        X = np.linspace(0, 30, num=51).reshape(-1, 1)
         Z = -np.cos(X * 0.5) # XXX really?
         y = np.sin(X * 0.5).ravel()
 
@@ -115,8 +115,8 @@ class SineDataset(Dataset):
         kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
         ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
 
-        arms_z = list(np.arange(-2, 2, 0.05).reshape(-1, 1))
-        arms_y = list(np.arange(-2, 2, 0.05))
+        arms_z = list(np.linspace(-1, 1, 20).reshape(-1, 1))
+        arms_y = list(np.linspace(-1, 1, 20))
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
