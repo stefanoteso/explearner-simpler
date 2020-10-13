@@ -35,11 +35,6 @@ class Dataset(ABC):
         How to combine the three kernels.
     rng : int or RandomState or None
         The RNG.
-
-    Attributes
-    ----------
-    f : ndarray of shape (n_examples,)
-        Pre-computed reward for the optimal arm (noiseless).
     """
     def __init__(self, X, Z, y, kx, kz, ky, arms, combiner='prod', rng=None):
         assert X.ndim == 2
