@@ -5,17 +5,19 @@ from explearner import load
 
 
 def get_style(args, trace_args):
-    label = {
-        'ucb': 'UCB',
-        'random': 'rand.',
-    }[trace_args.strategy]
+    label = f'EXPLEARN {trace_args.strategy} {trace_args.combiner}'
 
     color = {
         'ucb': '#ff0000',
         'random': '#00007f',
     }[trace_args.strategy]
 
-    return label, color
+    linestyle = {
+        'prod': '-',
+        'sum': '.',
+    }[trace_args.combiner]
+
+    return label, color, linestyle
 
 
 def draw(args, traces, traces_args):
@@ -36,8 +38,9 @@ def draw(args, traces, traces_args):
             y = np.mean(perf, axis=0)
             yerr = np.std(perf, axis=0) / np.sqrt(n_folds)
 
-            label, color = get_style(args, trace_args[p])
-            ax.plot(x, y, linewidth=2, label=label, color=color)
+            label, color, linestyle = get_style(args, trace_args[p])
+            ax.plot(x, y, linewidth=2,
+                    label=label, color=color, linestyle=linestyle)
             ax.fill_between(x, y - yerr, y + yerr,
                             alpha=0.35, linewidth=0, color=color)
 
