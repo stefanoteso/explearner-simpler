@@ -14,7 +14,7 @@ def get_style(args, trace_args):
 
     linestyle = {
         'prod': '-',
-        'sum': '.',
+        'sum': ':',
     }[trace_args.combiner]
 
     return label, color, linestyle
