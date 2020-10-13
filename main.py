@@ -66,12 +66,12 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 
         # Compute the average regret over the test contexts
         test_regrets = []
-        for i in ts:
-            zhat, yhat = gp.predict_arm(dataset, dataset.X[i])
-            test_regrets.append(dataset.regret(i, zhat, yhat))
+        for j in ts:
+            zhat, yhat = gp.predict_arm(dataset, dataset.X[j])
+            test_regrets.append(dataset.regret(j, zhat, yhat))
         avg_test_regret = np.mean(test_regrets)
 
-        print(f'iter {t:2d}:  {regret:5.3f} {avg_test_regret:5.3f}  y: {dataset.y[i]} vs {ybest}  z: {dataset.Z[i]} vs {zbest}')
+        print(f'iter {t:2d}:  {regret:5.3f} {avg_test_regret:5.3f}  ctx {i}  y: {dataset.y[i]} vs {ybest}  z: {dataset.Z[i]} vs {zbest}')
         trace.append((regret, avg_test_regret))
 
     return trace
