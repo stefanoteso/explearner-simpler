@@ -23,19 +23,26 @@ def get_style(args, trace_args):
 def draw(args, traces, traces_args):
     n_pickles, n_folds, n_iters, n_measures = traces.shape
 
-    measures = ['Inst. Regret', 'Test Regret']
+    cumavg = lambda y: 1 / np.arange(1, len(y) + 1) * np.cumsum(y)
+    PLOTS = [
+        ('Regret', 0, None),
+        ('Cum. Regret', 0, cumavg),
+        ('Test Regret', 1, None),
+    ]
 
-    for m in range(n_measures):
+    for j, (y_label, index, transform) in enumerate(PLOTS):
         fig, ax = plt.subplots(1, 1, figsize=(5, 3))
 
         ax.set_xlabel('Iterations')
-        ax.set_ylabel(measures[m])
+        ax.set_ylabel(y_label)
 
         for p in range(n_pickles):
-            perf = traces[p, :, :, m]
+            perf = traces[p, :, :, index]
 
             x = np.arange(n_iters)
             y = np.mean(perf, axis=0)
+            if transform:
+                y = transform(y)
             yerr = np.std(perf, axis=0) / np.sqrt(n_folds)
 
             label, color, linestyle = get_style(args, trace_args[p])
@@ -45,7 +52,7 @@ def draw(args, traces, traces_args):
                             alpha=0.35, linewidth=0, color=color)
 
         ax.legend(loc='upper right', fontsize=8, shadow=False)
-        fig.savefig(args.basename + '__{}.png'.format(m),
+        fig.savefig(args.basename + '__{}.png'.format(j),
                     bbox_inches='tight',
                     pad_inches=0)
         del fig
