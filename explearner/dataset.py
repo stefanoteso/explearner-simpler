@@ -45,7 +45,10 @@ class Dataset(ABC):
         self.rng = check_random_state(rng)
 
         self.X, self.Z, self.y = X, Z, y
-        self.kernel = CombinerKernel(kx, kz, ky, combiner)
+        self.kernel = CombinerKernel(kx, kz, ky,
+                                     X.shape[1],
+                                     Z.shape[1],
+                                     combiner)
         self.arms = arms
 
     @abstractmethod
