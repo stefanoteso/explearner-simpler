@@ -9,8 +9,6 @@ from scipy.spatial.distance import cosine as cosine_dist
 from itertools import product, combinations
 from os.path import join
 
-from .kernel import CombinerKernel
-
 
 class Dataset(ABC):
     """A dataset.
@@ -45,7 +43,13 @@ class Dataset(ABC):
         self.rng = check_random_state(rng)
 
         self.X, self.Z, self.y = X, Z, y
-        self.kernel = CombinerKernel(kx, kz, ky, combiner)
+        self.combiner = combiner
+        if combiner == 'sum':
+            self.kernel = (kx + kz) * ky
+        elif combiner == 'prod':
+            self.kernel = kx * kz * ky
+        else:
+            raise ValueError(f'unknown combiner {combiner}')
         self.arms = arms
 
     @abstractmethod
