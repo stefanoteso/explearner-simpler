@@ -9,12 +9,16 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
         self.kx, self.kz, self.ky = kx, kz, ky
         self.nx, self.nz = nx, nz
         self.combiner = combiner
+
         if combiner == 'sum':
-            self._combine = lambda u, v, w: (u + v) * w
+            self._calc = self._calc_sum
+            self._grad = self._grad_sum
         elif combiner == 'prod':
-            self._combine = lambda u, v, w: u * v * w
+            self._calc = self._calc_prod
+            self._grad = self._grad_prod
         else:
             raise ValueError(f'unknown combiner {combiner}')
+
         super().__init__((kx, kz, ky))
 
     def get_params(self, deep=True):
@@ -29,24 +33,51 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
         Y = D[:, -1].reshape(-1, 1)
         return X, Z, Y
 
+    @staticmethod
+    def _calc_sum(Kx, Kz, Ky):
+        return (Kx + Kz) * Ky
+
+    @staticmethod
+    def _grad_sum(Kx, Kz, Ky, Gx, Gz, Gy):
+        Ky = Ky[:, :, np.newaxis]
+        return np.dstack([
+            Gx * Ky,
+            Gz * Ky,
+            (Kx + Kz)[:, :, np.newaxis] * Gy,
+        ])
+
+    @staticmethod
+    def _calc_prod(Kx, Kz, Ky):
+        return Kx * Kz * Ky
+
+    @staticmethod
+    def _grad_prod(Kx, Kz, Ky, Gx, Gy, Gz):
+        Kx = Kx[:, :, np.newaxis]
+        Kz = Kz[:, :, np.newaxis]
+        Ky = Ky[:, :, np.newaxis]
+        return np.dstack([
+            Gx * Kz * Ky,
+            Kx * Gz * Ky,
+            Kx * Kz * Gy,
+        ])
+
     def __call__(self, A, B=None, eval_gradient=False):
         AX, AZ, AY = self._unpack(A)
         BX, BZ, BY = self._unpack(B)
         if eval_gradient:
-            Kx, Kx_gradient = self.kx(AX, BX, eval_gradient=True)
-            Kz, Kz_gradient = self.kz(AZ, BZ, eval_gradient=True)
-            Ky, Ky_gradient = self.ky(AY, BY, eval_gradient=True)
-            K = self._combine(Kx, Kz, Ky)
-            grad = np.dstack((Kx_gradient, Ky_gradient, Kz_gradient)) # XXX hack
-            return K, grad
+            Kx, Gx = self.kx(AX, BX, eval_gradient=True)
+            Kz, Gz = self.kz(AZ, BZ, eval_gradient=True)
+            Ky, Gy = self.ky(AY, BY, eval_gradient=True)
+            return (self._calc(Kx, Kz, Ky),
+                    self._grad(Kx, Kz, Ky, Gx, Gz, Gy))
         else:
             Kx = self.kx(AX, BX, eval_gradient=False)
             Kz = self.kz(AZ, BZ, eval_gradient=False)
             Ky = self.ky(AY, BY, eval_gradient=False)
-            return self._combine(Kx, Kz, Ky)
+            return self._calc(Kx, Kz, Ky)
 
     def diag(self, D):
         X, Z, Y = self._unpack(D)
-        return self._combine(self.kx.diag(X),
-                             self.kz.diag(Z),
-                             self.ky.diag(Y))
+        return self._calc(self.kx.diag(X),
+                          self.kz.diag(Z),
+                          self.ky.diag(Y))
