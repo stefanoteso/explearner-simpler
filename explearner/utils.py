@@ -10,3 +10,4 @@ def load(path, **kwargs):
 def dump(path, what, **kwargs):
     with open(path, 'wb') as fp:
         pickle.dump(what, fp, **kwargs)
+

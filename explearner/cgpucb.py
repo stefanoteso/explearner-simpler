@@ -24,21 +24,21 @@ class CGPUCB(GPR):
 
     def predict_arm(self, dataset, x):
         """Returns the best arm for context x."""
-        x = x[:, None]
+        x = np.array([x])
 
         def mean_reward(arm):
             z, y = arm
-            return self.predict(x, z[:, None], y[None, None])[0]
+            return self.predict(x, np.array([z]), y[None, None])[0]
 
         return max(dataset.arms, key=mean_reward)
 
     def _select_arm_by_ucb(self, dataset, x, beta=1.0):
         """Returns the arm that maximizes the UCB of x."""
-        x = x[:, None]
+        x = np.array([x])
 
         def ucb(arm):
             z, y = arm
-            mean, std = self.predict(x, z[:, None], y[None, None],
+            mean, std = self.predict(x, np.array([z]), y[None, None],
                                      return_std=True)
             return mean[0] + np.sqrt(beta) * std[0]
 

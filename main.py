@@ -17,6 +17,8 @@ DATASETS = {
         LineDataset,
     'sine':
         SineDataset,
+    'bank':
+        BanknoteAuth,
     'colors-0':
         lambda *args, **kwargs: ColorsDataset(*args, rule=0, **kwargs),
     'colors-1':
@@ -39,6 +41,9 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 
     # The observed (noisy) rewards
     fobs = np.zeros(dataset.X.shape[0])
+    Xsize = dataset.X.shape[0]
+    delta = 0.8
+
 
     trace = []
     for t in range(args.n_iters):
@@ -55,6 +60,7 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 
         # Select a query arm and observe the reward
         # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
+        beta = 2 * np.log(Xsize * ((t + 1) ** 2) * (np.pi ** 2) / (6 * delta))
         zhat, yhat = gp.select_arm(dataset, dataset.X[i], beta=1)
         fobs[i] = dataset.reward(i, zhat, yhat, noise=args.noise)
 
@@ -156,3 +162,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# if __name__ == '__main__':
+#     dataset = BanknoteAuth()
