@@ -89,10 +89,11 @@ def evaluate(dataset, args, rng=None):
     split = KFold(n_splits=args.n_splits, shuffle=True, random_state=rng)
 
     folds = []
-    for tr, ts in split.split(dataset.X):
+    for k, (tr, ts) in enumerate(split.split(dataset.X)):
         n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
         kn = rng.permutation(tr)[:n_known]
         ts = rng.permutation(ts)[:20]
+        print(f'fold {k}: |known|={len(kn)} |train|={len(tr)} |test|={len(ts)}')
         folds.append((kn, tr, ts))
 
     return [evaluate_fold(dataset, kn, tr, ts, args, rng=rng)
