@@ -34,35 +34,44 @@ DATASETS = {
 
 def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
     rng = check_random_state(rng)
+    Xsize = dataset.X.shape[0]
+    delta = 0.8
 
     gp = CGPUCB(kernel=dataset.kernel,
                 strategy=args.strategy,
                 random_state=rng)
 
-    # The observed (noisy) rewards
-    fobs = np.zeros(dataset.X.shape[0])
-    Xsize = dataset.X.shape[0]
-    delta = 0.8
-
+    # The observed arms and (noisy) rewards
+    observed_X = [dataset.X[i] for i in kn]
+    observed_Z = [dataset.Z[i] for i in kn]
+    observed_y = [dataset.y[i] for i in kn]
+    observed_f = [dataset.reward(i, dataset.Z[i], dataset.y[i], noise=args.noise)
+                  for i in kn]
 
     trace = []
     for t in range(args.n_iters):
 
         # Fit the GP on the observed data
-        gp.fit(dataset.X[kn],
-               dataset.Z[kn],
-               dataset.y[kn],
-               fobs[kn])
+        gp.fit(np.array(observed_X),
+               np.array(observed_Z),
+               np.array(observed_y),
+               np.array(observed_f))
 
         # Select a context
         i = rng.choice(tr)
-        kn = np.array(list(sorted(set(kn) | {i})))
 
         # Select a query arm and observe the reward
         # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
         beta = 2 * np.log(Xsize * ((t + 1) ** 2) * (np.pi ** 2) / (6 * delta))
-        zhat, yhat = gp.select_arm(dataset, dataset.X[i], beta=1)
-        fobs[i] = dataset.reward(i, zhat, yhat, noise=args.noise)
+        xhat = dataset.X[i]
+        zhat, yhat = gp.select_arm(dataset, xhat, beta=1)
+        fhat = dataset.reward(i, zhat, yhat, noise=args.noise)
+
+        # Update the set of observations
+        observed_X.append(xhat)
+        observed_Z.append(zhat)
+        observed_y.append(yhat)
+        observed_f.append(fhat)
 
         # Predict and compute the regret
         # XXX I am distinguishing between query and prediction so that random
