@@ -144,7 +144,7 @@ def main():
 
     args = parser.parse_args()
 
-    #np.seterr(all='raise') # XXX the RBF kernel underflows often
+    np.seterr(all='warn') # XXX the RBF kernel underflows often
     np.set_printoptions(precision=3, linewidth=80)
 
     np.random.seed(args.seed) # XXX just in case

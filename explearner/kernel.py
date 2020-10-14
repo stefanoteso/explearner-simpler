@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin, Kernel
+from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin
 from sklearn.base import clone
 
 
@@ -7,7 +7,6 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
     """A kernel on triples."""
     def __init__(self, kx, kz, ky, nx, nz, combiner):
         self.kx, self.kz, self.ky = kx, kz, ky
-        self.k1 = kx
         self.nx, self.nz = nx, nz
         self.combiner = combiner
         if combiner == 'sum':
@@ -51,4 +50,3 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
         return self._combine(self.kx.diag(X),
                              self.kz.diag(Z),
                              self.ky.diag(Y))
-
