@@ -8,7 +8,9 @@ import pandas as pd
 
 from abc import ABC, abstractmethod
 
+from sklearn.datasets import load_breast_cancer
 from sklearn.metrics import jaccard_score
+from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 from sklearn.model_selection import GridSearchCV
 from sklearn.gaussian_process.kernels import RBF, DotProduct
@@ -348,3 +350,17 @@ class BanknoteAuth(TreeDataset):
             with open(filename, "wb") as file:
                 file.write(data)
 
+class BreastCancer(Dataset):
+
+    def __init__(self, **kwargs):
+        model = kwargs.pop("model")
+
+        # Samples per class	212(M),357(B)
+        dataset = load_breast_cancer()
+
+        X = dataset.data
+        # 0 is "malignant", 1 is "benign"
+        y = dataset.target
+
+        super().__init__(model, X, y, feature_names=list(dataset.feature_names), name="Breast Cancer", prop_known=0.01,
+                         rng=model.rng, normalizer=StandardScaler())
