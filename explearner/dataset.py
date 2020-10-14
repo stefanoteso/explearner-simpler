@@ -261,8 +261,41 @@ class AdultDataset(Dataset):
     def reward(self, i, zhat, yhat, noise=0):
         raise NotImplementedError()
 
+class TreeDataset(Dataset):
+    @abstractmethod
+    def reward(self, i, zhat, yhat, noise=0):
+        pass
 
-class BanknoteAuth(Dataset):
+    def root_to_leaf_paths(self, node_id):
+        """
+        Finds all root-to-leaf paths in a decision tree.
+        Returns: All paths from root-to-leaf
+        """
+        # The node is a leaf
+        if self.tree.children_left[node_id] == self.tree.children_right[node_id]:
+            path = np.zeros(self.tree.node_count)
+            path[node_id] = 1
+            return [path]
+        # Recursively scan left and right children
+        else:
+            paths = []
+            left_paths = self.root_to_leaf_paths(self.tree.children_left[node_id])
+            for path in left_paths:
+                path[node_id] = 1
+                paths.append(path)
+            right_paths = self.root_to_leaf_paths(self.tree.children_right[node_id])
+            for path in right_paths:
+                path[node_id] = 1
+                paths.append(path)
+            return paths
+
+    def reward(self, i, zhat, yhat, noise=0):
+        z, y = self.Z[i], self.y[i]
+
+        sign = 1 if y == yhat else -1
+        return sign * (jaccard_score(z, zhat)) + self.rng.normal(0, noise)
+
+class BanknoteAuth(TreeDataset):
     def __init__(self, **kwargs):
         urls = ["https://archive.ics.uci.edu/ml/machine-learning-databases/00267/data_banknote_authentication.txt"]
         self.load_dataset('data', urls)
@@ -299,12 +332,6 @@ class BanknoteAuth(Dataset):
         arms = list(product(arms_z, arms_y))
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
-    def reward(self, i, zhat, yhat, noise=0):
-        z, y = self.Z[i], self.y[i]
-
-        sign = 1 if y == yhat else -1
-        return sign * (jaccard_score(z, zhat)) + self.rng.normal(0, noise)
-
     @staticmethod
     def load_dataset(path, urls):
         """
@@ -321,25 +348,3 @@ class BanknoteAuth(Dataset):
             with open(filename, "wb") as file:
                 file.write(data)
 
-    def root_to_leaf_paths(self, node_id):
-        """
-        Finds all root-to-leaf paths in a decision tree.
-        Returns: All paths from root-to-leaf
-        """
-        # The node is a leaf
-        if self.tree.children_left[node_id] == self.tree.children_right[node_id]:
-            path = np.zeros(self.tree.node_count)
-            path[node_id] = 1
-            return [path]
-        # Recursively scan left and right children
-        else:
-            paths = []
-            left_paths = self.root_to_leaf_paths(self.tree.children_left[node_id])
-            for path in left_paths:
-                path[node_id] = 1
-                paths.append(path)
-            right_paths = self.root_to_leaf_paths(self.tree.children_right[node_id])
-            for path in right_paths:
-                path[node_id] = 1
-                paths.append(path)
-            return paths
