@@ -1,8 +1,6 @@
 import os
 import requests
 
-from tkinter.ttk import Label
-
 import numpy as np
 import pandas as pd
 
@@ -100,16 +98,16 @@ class LineDataset(NormNormRewardMixin, Dataset):
     """Toy 1-D dataset."""
 
     def __init__(self, **kwargs):
-        X = np.linspace(-1, 1, num=51).reshape(-1, 1)
+        X = np.linspace(-1, 1, num=5).reshape(-1, 1)
         Z = np.ones((X.shape[0], 1))
         y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
 
-        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        ky = DotProduct(sigma_0=0.01, sigma_0_bounds=(0.01, 0.01))
 
-        arms_z = list(np.linspace(-1, 1, 20).reshape(-1, 1))
-        arms_y = list(np.linspace(-1, 1, 20))
+        arms_z = list(np.linspace(-1, 1, 5).reshape(-1, 1))
+        arms_y = list(np.linspace(-1, 1, 5))
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
