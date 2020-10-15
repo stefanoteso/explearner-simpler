@@ -1,5 +1,6 @@
 import os
 import requests
+
 import numpy as np
 import pandas as pd
 
@@ -105,16 +106,16 @@ class LineDataset(NormNormRewardMixin, Dataset):
     """Toy 1-D dataset."""
 
     def __init__(self, **kwargs):
-        X = np.linspace(-1, 1, num=51).reshape(-1, 1)
+        X = np.linspace(-1, 1, num=5).reshape(-1, 1)
         Z = np.ones((X.shape[0], 1))
         y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
 
-        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        ky = DotProduct(sigma_0=0.01, sigma_0_bounds=(0.01, 0.01))
 
-        arms_z = list(np.linspace(-1, 1, 20).reshape(-1, 1))
-        arms_y = list(np.linspace(-1, 1, 20))
+        arms_z = list(np.linspace(-1, 1, 5).reshape(-1, 1))
+        arms_y = list(np.linspace(-1, 1, 5))
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
@@ -374,32 +375,5 @@ class BreastCancer(Dataset):
         # 0 is "malignant", 1 is "benign"
         y = dataset.target
 
-        # We reduce the dimensionality to be able to generate all possible rankings as explanations
-        normalized_data = StandardScaler().fit_transform(X)
-        pca = PCA(n_components=pca_dim)
-        X = pca.fit_transform(normalized_data)
-
-        rf = RandomForestClassifier(n_estimators=10, criterion='entropy', random_state=0)
-        rf.fit(X, y)
-        _, _, contributions = ti.predict(rf, X)
-
-        Z = np.array([contr if y[i] else -contr for i, contr in enumerate(contributions[:, :, 0])])
-
-        # Kernels
-        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        kz = KendallKernel() #ranking kernels
-        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
-
-        # The space of explanations is all possible permutations!
-        # TODO: Improve efficiency by excluding some permutation
-        arms_z = np.array(list(multiset_permutations(np.arange(pca_dim))))
-        arms_y = np.array([0, 1])
-        arms = list(product(arms_z, arms_y))
-
-        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
-
-    def reward(self, i, zhat, yhat, noise=0):
-        z, y = self.Z[i], self.y[i]
-        sign = 1 if y == yhat else -1
-        return sign * (kendalltau(z, zhat)) + self.rng.normal(0, noise)
-
+        super().__init__(model, X, y, feature_names=list(dataset.feature_names), name="Breast Cancer", prop_known=0.01,
+                         rng=model.rng, normalizer=StandardScaler())
