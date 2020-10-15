@@ -23,7 +23,7 @@ from sympy.utilities.iterables import multiset_permutations
 
 from treeinterpreter import treeinterpreter as ti
 
-from . import KendallKernel
+from . import KendallKernel, rank_items, kendall_tau_dist
 from .kernel import CombinerKernel
 
 
@@ -384,7 +384,7 @@ class BreastCancer(Dataset):
         rf.fit(X, y)
         _, _, contributions = ti.predict(rf, X)
 
-        Z = np.array([contr if y[i] else -contr for i, contr in enumerate(contributions[:, :, 0])])
+        Z = np.array([rank_items(contr) if y[i] else rank_items(-contr) for i, contr in enumerate(contributions[:, :, 0])])
 
         # Kernels
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
@@ -402,4 +402,4 @@ class BreastCancer(Dataset):
     def reward(self, i, zhat, yhat, noise=0):
         z, y = self.Z[i], self.y[i]
         sign = 1 if y == yhat else -1
-        return sign * (kendalltau(z, zhat)) + self.rng.normal(0, noise)
+        return sign * (kendall_tau_dist(z, zhat)) + self.rng.normal(0, noise)

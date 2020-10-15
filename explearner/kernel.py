@@ -2,6 +2,9 @@ import numpy as np
 from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin, Kernel
 from scipy.stats import kendalltau
 
+from explearner import kendall_tau_dist
+
+
 class CombinerKernel(GenericKernelMixin, CompoundKernel):
     """A kernel on triples."""
     def __init__(self, kx, kz, ky, nx, nz, combiner):
@@ -92,7 +95,7 @@ class KendallKernel(GenericKernelMixin, Kernel):
     """
     #TODO: Gradient?
     def __call__(self, X, Y=None, eval_gradient=False):
-        K = kendalltau(X, Y)
+        K = kendall_tau_dist(X, Y)
         if eval_gradient:
             return 1, K
         else:
