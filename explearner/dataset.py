@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 from sklearn.model_selection import GridSearchCV
 from sklearn.gaussian_process.kernels import RBF, DotProduct
-from sklearn import tree
+from sklearn import tree, preprocessing
 from sklearn.ensemble import RandomForestClassifier
 from scipy.stats import norm, kendalltau
 from scipy.spatial.distance import cosine as cosine_dist
@@ -371,7 +371,6 @@ class BreastCancer(Dataset):
 
         # Data
         X = dataset.data
-        Z = np.array([[]])
         # 0 is "malignant", 1 is "benign"
         y = dataset.target
 
@@ -403,3 +402,43 @@ class BreastCancer(Dataset):
         z, y = self.Z[i], self.y[i]
         sign = 1 if y == yhat else -1
         return sign * (kendall_tau_dist(z, zhat)) + self.rng.normal(0, noise)
+
+
+class WineQuality(TreeDataset):
+    """
+    Wine quality is a larger regression dataset to test regression reward.
+    Samples: 4898, Features: 12
+    """
+
+    def __init__(self, **kwargs):
+        dataset = pd.read_csv("data/winequality-white.csv", sep=';')
+
+        # target values: wine quality, values from 3-9
+        y = dataset['quality'].to_numpy()
+        # creating the feature vector
+        X = dataset.drop('quality', axis=1).to_numpy()
+        scaler = preprocessing.StandardScaler().fit(X)
+        X = scaler.transform(X)
+
+        # clf_type = kwargs.pop('clf')
+
+        clf = tree.DecisionTreeRegressor()
+        clf = clf.fit(X, y)
+        self.tree = clf.tree_
+        # Extremely sparse explanations
+        Z = clf.decision_path(X).toarray()
+
+        # Kernels
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        kz = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
+
+        arms_z = self.root_to_leaf_paths(0)
+        arms_y = np.arange(3, 10)
+        arms = list(product(arms_z, arms_y))
+        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
+
+    def reward(self, i, zhat, yhat, noise=0):
+        z, y = self.Z[i], self.y[i]
+        reward_y = norm(loc=y, scale=0.1).pdf(yhat)
+        return reward_y * jaccard_score(z, zhat) + self.rng.normal(0, noise)
