@@ -332,7 +332,7 @@ class BanknoteAuth(TreeDataset):
         # Z = np.array(Z)
 
         # Kernels
-        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
         kz = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))  # Explanations are sparse
         ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
 
@@ -375,5 +375,31 @@ class BreastCancer(Dataset):
         # 0 is "malignant", 1 is "benign"
         y = dataset.target
 
-        super().__init__(model, X, y, feature_names=list(dataset.feature_names), name="Breast Cancer", prop_known=0.01,
-                         rng=model.rng, normalizer=StandardScaler())
+        # We reduce the dimensionality to be able to generate all possible rankings as explanations
+        normalized_data = StandardScaler().fit_transform(X)
+        pca = PCA(n_components=pca_dim)
+        X = pca.fit_transform(normalized_data)
+
+        rf = RandomForestClassifier(n_estimators=10, criterion='entropy', random_state=0)
+        rf.fit(X, y)
+        _, _, contributions = ti.predict(rf, X)
+
+        Z = np.array([contr if y[i] else -contr for i, contr in enumerate(contributions[:, :, 0])])
+
+        # Kernels
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        kz = KendallKernel()  # ranking kernels
+        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+
+        # The space of explanations is all possible permutations!
+        # TODO: Improve efficiency by excluding some permutation
+        arms_z = np.array(list(multiset_permutations(np.arange(pca_dim))))
+        arms_y = np.array([0, 1])
+        arms = list(product(arms_z, arms_y))
+
+        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
+
+    def reward(self, i, zhat, yhat, noise=0):
+        z, y = self.Z[i], self.y[i]
+        sign = 1 if y == yhat else -1
+        return sign * (kendalltau(z, zhat)) + self.rng.normal(0, noise)
