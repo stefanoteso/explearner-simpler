@@ -82,7 +82,6 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
                           self.kz.diag(Z),
                           self.ky.diag(Y))
 
-#TODO: Implement kernel
 class KendallKernel(GenericKernelMixin, Kernel):
     """
        Class for the Kendall Tau-like kernel, with:
@@ -91,10 +90,11 @@ class KendallKernel(GenericKernelMixin, Kernel):
 
        where C,D is the number of concordant and discordant pairs, respectively.
     """
+    #TODO: Gradient?
     def __call__(self, X, Y=None, eval_gradient=False):
         K = kendalltau(X, Y)
         if eval_gradient:
-            pass
+            return 1, K
         else:
             return K
 
@@ -102,4 +102,4 @@ class KendallKernel(GenericKernelMixin, Kernel):
         return np.ones(np.shape(X)[0])
 
     def is_stationary(self):
-        pass
+        return False

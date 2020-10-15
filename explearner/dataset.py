@@ -14,7 +14,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.gaussian_process.kernels import RBF, DotProduct
 from sklearn import tree
 from sklearn.ensemble import RandomForestClassifier
-from scipy.stats import norm
+from scipy.stats import norm, kendalltau
 from scipy.spatial.distance import cosine as cosine_dist
 from itertools import product, combinations
 from os.path import join
@@ -399,4 +399,7 @@ class BreastCancer(Dataset):
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
     def reward(self, i, zhat, yhat, noise=0):
-        pass
+        z, y = self.Z[i], self.y[i]
+        sign = 1 if y == yhat else -1
+        return sign * (kendalltau(z, zhat)) + self.rng.normal(0, noise)
+
