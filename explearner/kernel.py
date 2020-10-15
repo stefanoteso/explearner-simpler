@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin, Kernel
-from sklearn.base import clone
-
+from scipy.stats import kendalltau
 
 class CombinerKernel(GenericKernelMixin, CompoundKernel):
     """A kernel on triples."""
@@ -9,6 +8,7 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
         self.kx, self.kz, self.ky = kx, kz, ky
         self.nx, self.nz = nx, nz
         self.combiner = combiner
+        self.k1 = kx
 
         if combiner == 'sum':
             self._calc = self._calc_sum
@@ -82,13 +82,24 @@ class CombinerKernel(GenericKernelMixin, CompoundKernel):
                           self.kz.diag(Z),
                           self.ky.diag(Y))
 
+#TODO: Implement kernel
 class KendallKernel(GenericKernelMixin, Kernel):
+    """
+       Class for the Kendall Tau-like kernel, with:
 
+            (C-D)/comb(n,2)
+
+       where C,D is the number of concordant and discordant pairs, respectively.
+    """
     def __call__(self, X, Y=None, eval_gradient=False):
-        pass
+        K = kendalltau(X, Y)
+        if eval_gradient:
+            pass
+        else:
+            return K
 
     def diag(self, X):
-        pass
+        return np.ones(np.shape(X)[0])
 
     def is_stationary(self):
         pass

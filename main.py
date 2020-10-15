@@ -17,14 +17,14 @@ DATASETS = {
         LineDataset,
     'sine':
         SineDataset,
-    'bank':
-        BanknoteAuth,
     'colors-0':
         lambda *args, **kwargs: ColorsDataset(*args, rule=0, **kwargs),
     'colors-1':
         lambda *args, **kwargs: ColorsDataset(*args, rule=1, **kwargs),
 
     # Datasets with explanations extracted from a model
+    'bank':
+        BanknoteAuth,
     'adult-lm':
         lambda *args, **kwargs: AdultDataset(*args, clf='lm', **kwargs),
     'adult-dt':
@@ -144,7 +144,7 @@ def main():
 
     args = parser.parse_args()
 
-    np.seterr(all='warn') # XXX the RBF kernel underflows often
+    #np.seterr(all='warn') # XXX the RBF kernel underflows often
     np.set_printoptions(precision=3, linewidth=80)
 
     np.random.seed(args.seed) # XXX just in case
@@ -160,9 +160,9 @@ def main():
     })
 
 
-if __name__ == '__main__':
-    main()
-
-
 # if __name__ == '__main__':
-#     dataset = BanknoteAuth()
+#     main()
+
+
+if __name__ == '__main__':
+    dataset = BreastCancer()

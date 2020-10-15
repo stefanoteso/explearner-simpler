@@ -1,25 +1,28 @@
 import os
 import requests
-
-from tkinter.ttk import Label
-
 import numpy as np
 import pandas as pd
 
 from abc import ABC, abstractmethod
 
 from sklearn.datasets import load_breast_cancer
+from sklearn.decomposition import PCA
 from sklearn.metrics import jaccard_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 from sklearn.model_selection import GridSearchCV
 from sklearn.gaussian_process.kernels import RBF, DotProduct
 from sklearn import tree
+from sklearn.ensemble import RandomForestClassifier
 from scipy.stats import norm
 from scipy.spatial.distance import cosine as cosine_dist
 from itertools import product, combinations
 from os.path import join
+from sympy.utilities.iterables import multiset_permutations
 
+from treeinterpreter import treeinterpreter as ti
+
+from . import KendallKernel
 from .kernel import CombinerKernel
 
 
@@ -90,11 +93,13 @@ class Dataset(ABC):
 
 class NormNormRewardMixin:
     """Implements a simple reward function for scalar explanations."""
+
     def reward(self, i, zhat, yhat, noise=0):
-        x, z, y = self.X[i,0], self.Z[i,0], self.y[i]
+        x, z, y = self.X[i, 0], self.Z[i, 0], self.y[i]
         reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
         reward_y = norm(loc=y, scale=0.1).pdf(yhat)
         return reward_z * reward_y + self.rng.normal(0, noise)
+
 
 class LineDataset(NormNormRewardMixin, Dataset):
     """Toy 1-D dataset."""
@@ -263,6 +268,7 @@ class AdultDataset(Dataset):
     def reward(self, i, zhat, yhat, noise=0):
         raise NotImplementedError()
 
+
 class TreeDataset(Dataset):
     @abstractmethod
     def reward(self, i, zhat, yhat, noise=0):
@@ -296,6 +302,7 @@ class TreeDataset(Dataset):
 
         sign = 1 if y == yhat else -1
         return sign * (jaccard_score(z, zhat)) + self.rng.normal(0, noise)
+
 
 class BanknoteAuth(TreeDataset):
     def __init__(self, **kwargs):
@@ -350,17 +357,46 @@ class BanknoteAuth(TreeDataset):
             with open(filename, "wb") as file:
                 file.write(data)
 
+
 class BreastCancer(Dataset):
+    """
+    Breast cancer dataset with ranking explanations extracted from a Random Forest classifier.
+    """
 
     def __init__(self, **kwargs):
-        model = kwargs.pop("model")
-
         # Samples per class	212(M),357(B)
         dataset = load_breast_cancer()
+        pca_dim = 10
 
+        # Data
         X = dataset.data
+        Z = np.array([[]])
         # 0 is "malignant", 1 is "benign"
         y = dataset.target
 
-        super().__init__(model, X, y, feature_names=list(dataset.feature_names), name="Breast Cancer", prop_known=0.01,
-                         rng=model.rng, normalizer=StandardScaler())
+        # We reduce the dimensionality to be able to generate all possible rankings as explanations
+        normalized_data = StandardScaler().fit_transform(X)
+        pca = PCA(n_components=pca_dim)
+        X = pca.fit_transform(normalized_data)
+
+        rf = RandomForestClassifier(n_estimators=10, criterion='entropy', random_state=0)
+        rf.fit(X, y)
+        _, _, contributions = ti.predict(rf, X)
+
+        Z = np.array([contr if y[i] else -contr for i, contr in enumerate(contributions[:, :, 0])])
+
+        # Kernels
+        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
+        kz = KendallKernel() #ranking kernels
+        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+
+        # The space of explanations is all possible permutations!
+        # TODO: Improve efficiency by excluding some permutation
+        arms_z = np.array(list(multiset_permutations(np.arange(pca_dim))))
+        arms_y = np.array([0, 1])
+        arms = list(product(arms_z, arms_y))
+
+        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
+
+    def reward(self, i, zhat, yhat, noise=0):
+        pass
