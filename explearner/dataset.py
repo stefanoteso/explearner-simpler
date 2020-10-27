@@ -11,7 +11,7 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import jaccard_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.gaussian_process.kernels import RBF, DotProduct
 from sklearn import tree, preprocessing
 from sklearn.ensemble import RandomForestClassifier
@@ -79,6 +79,15 @@ class Dataset(ABC):
         r = self.reward(i, self.Z[i], self.y[i]) - self.reward(i, zhat, yhat)
         assert r >= 0
         return r
+
+    def split(self, n_splits):
+        """Iterate over folds."""
+        kfold = KFold(n_splits=n_splits, shuffle=True, random_state=self.rng)
+        for tr, ts in enumerate(kfold.split(self.X)):
+            n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
+            kn = self.rng.permutation(tr)[:n_known]
+            ts = self.rng.permutation(ts)[:20] # XXX
+            yield kn, tr, ts
 
     def select_model(self, clf, X, y, grid):
         """Selects a model using grid search."""

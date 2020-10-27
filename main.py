@@ -1,7 +1,6 @@
 import numpy as np
 
 from sklearn.utils import check_random_state
-from sklearn.model_selection import KFold
 from os.path import join
 
 from explearner import *
@@ -95,13 +94,8 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 def evaluate(dataset, args, rng=None):
     rng = check_random_state(rng)
 
-    split = KFold(n_splits=args.n_splits, shuffle=True, random_state=rng)
-
     folds = []
-    for k, (tr, ts) in enumerate(split.split(dataset.X)):
-        n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
-        kn = rng.permutation(tr)[:n_known]
-        ts = rng.permutation(ts)[:20]
+    for k, (kn, tr, ts) in enumerate(dataset.split(args.n_splits)):
         print(f'fold {k}: |known|={len(kn)} |train|={len(tr)} |test|={len(ts)}')
         folds.append((kn, tr, ts))
 
