@@ -12,6 +12,8 @@ from explearner import *
 
 DATASETS = {
     # Datasets with ground-truth explanations
+    'debug':
+        DebugDataset,
     'line':
         LineDataset,
     'sine':
