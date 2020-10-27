@@ -69,11 +69,13 @@ class Dataset(ABC):
 
     @abstractmethod
     def reward(self, i, zhat, yhat, noise=0):
-        """Reward of (x[i], zhat, yhat) given that the true triple is
+        """Reward of (x[i], zhat, yhat) given that the best arm is
         (x[i], z[i], y[i])."""
         pass
 
     def regret(self, i, zhat, yhat):
+        """Regret of (x[i], zhat, yhat) given that the best arm is
+        (x[i], z[i], y[i])."""
         r = self.reward(i, self.Z[i], self.y[i]) - self.reward(i, zhat, yhat)
         assert r >= 0
         return r
