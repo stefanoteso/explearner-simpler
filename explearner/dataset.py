@@ -119,8 +119,8 @@ class DebugDataset(NormNormRewardMixin, Dataset):
 
     def __init__(self, **kwargs):
         X = np.linspace(0, 0, num=1).reshape(-1, 1)
-        Z = np.zeros((X.shape[0], 1))
-        y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
+        Z = np.zeros(X.shape[0]).reshape(-1, 1)
+        y = np.zeros(X.shape[0])
 
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
         kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
@@ -142,7 +142,7 @@ class LineDataset(NormNormRewardMixin, Dataset):
 
     def __init__(self, **kwargs):
         X = np.linspace(-1, 1, num=5).reshape(-1, 1)
-        Z = np.ones((X.shape[0], 1))
+        Z = np.ones(X.shape[0]).reshape(-1, 1)
         y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
 
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
