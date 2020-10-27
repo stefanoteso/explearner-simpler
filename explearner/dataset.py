@@ -107,7 +107,7 @@ class NormNormRewardMixin:
     """Implements a simple reward function for scalar explanations."""
 
     def reward(self, i, zhat, yhat, noise=0):
-        x, z, y = self.X[i, 0], self.Z[i, 0], self.y[i]
+        z, y = self.Z[i, 0], self.y[i]
         reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
         reward_y = norm(loc=y, scale=0.1).pdf(yhat)
         return reward_z * reward_y + self.rng.normal(0, noise)
