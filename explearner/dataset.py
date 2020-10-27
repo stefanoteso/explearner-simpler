@@ -27,6 +27,9 @@ from . import KendallKernel, rank_items, kendall_tau_dist
 from .kernel import CombinerKernel
 
 
+# TODO move from X, Z, y to context, best_arm.
+
+
 class Dataset(ABC):
     """A dataset.
 
