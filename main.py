@@ -80,7 +80,14 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
 
     # Observe the reward of some random context-arm pairs
     observed_X, observed_Z, observed_y, observed_f = [], [], [], []
-    if True:
+    if args.passive:
+        for i, arm in product(range(len(dataset.X)), dataset.arms):
+            observed_X.append(dataset.X[i])
+            observed_Z.append(arm[0])
+            observed_y.append(arm[1])
+            observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
+        n_iters = 1
+    else:
         n_known = (args.p_known if args.p_known > 1 else
                    max(1, np.ceil(len(tr) * args.p_known)))
         for _ in range(int(n_known)):
@@ -91,14 +98,6 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
             observed_y.append(arm[1])
             observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
         n_iters = args.n_iters
-    else:
-        # XXX passive learning
-        for i, arm in product(range(len(dataset.X)), dataset.arms):
-            observed_X.append(dataset.X[i])
-            observed_Z.append(arm[0])
-            observed_y.append(arm[1])
-            observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
-        n_iters = 1
 
     print(f'running fold:  #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
@@ -115,16 +114,18 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
                np.array(observed_f))
 
         # XXX DEBUG
-        # from pprint import pprint
-        # pprint(list(zip(observed_X, observed_Z, observed_y, observed_f)))
-        # for i, arm in product(range(len(dataset.X)), dataset.arms):
-        #     x = dataset.X[i]
-        #     z = arm[0]
-        #     y = arm[1]
-        #     tempx = x.reshape((1, -1))
-        #     tempz = z.reshape((1, -1))
-        #     tempy = np.array([y])
-        #     print(f'reward @ ({z}, {y}): true={dataset.reward(0, z, y):7.4f} pred={gp.predict(tempx, tempz, tempy)[0]:7.4f}')
+        if args.passive:
+            from pprint import pprint
+            pprint(list(zip(observed_X, observed_Z, observed_y, observed_f)))
+            for i, arm in product(range(len(dataset.X)), dataset.arms):
+                x = dataset.X[i]
+                z = arm[0]
+                y = arm[1]
+                tempx = x.reshape((1, -1))
+                tempz = z.reshape((1, -1))
+                tempy = np.array([y])
+                print(f'reward @ ({x}, {z}, {y}): true={dataset.reward(i, z, y):7.4f} pred={gp.predict(tempx, tempz, tempy)[0]:7.4f}')
+            quit()
 
         # Select a context
         i = rng.choice(tr)
@@ -190,6 +191,8 @@ def main():
                        help='Proportion of seed context-arm rewards')
     group.add_argument('-T', '--n-iters', type=int, default=100,
                        help='Maximum number of learning iterations')
+    group.add_argument('--passive', action='store_true',
+                       help='Print passive performance, then quit')
 
     args = parser.parse_args()
 
