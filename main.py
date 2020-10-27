@@ -101,10 +101,7 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
 
     print(f'running fold:  #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
-    trace = []
-    pred_regret, test_regret = evaluate_iter(dataset, gp, i, ts)
-    trace.append((pred_regret, test_regret))
-
+    trace = [evaluate_iter(dataset, gp, i, ts)]
     for t in range(n_iters):
 
         # Fit the GP on the observed data
@@ -143,8 +140,7 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
         observed_y.append(yhat)
         observed_f.append(fhat)
 
-        pred_regret, test_regret = evaluate_iter(dataset, gp, i, ts)
-        trace.append((pred_regret, test_regret))
+        trace.append(evaluate_iter(dataset, gp, i, ts))
 
     return trace
 
