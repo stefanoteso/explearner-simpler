@@ -147,10 +147,10 @@ class LineDataset(NormNormRewardMixin, Dataset):
 
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
         kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
-        ky = DotProduct(sigma_0=0.01, sigma_0_bounds=(0.01, 0.01))
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
-        arms_z = list(np.linspace(-1, 1, 5).reshape(-1, 1))
-        arms_y = list(np.linspace(-1, 1, 5))
+        arms_z = np.linspace(-1, 1, 5).reshape(-1, 1)
+        arms_y = np.linspace(-1, 1, 5)
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
@@ -160,17 +160,17 @@ class SineDataset(NormNormRewardMixin, Dataset):
     """Toy 1-D dataset."""
 
     def __init__(self, **kwargs):
-        X = np.linspace(0, 30, num=51).reshape(-1, 1)
+        X = np.linspace(-3, 3, num=5).reshape(-1, 1)
         Z = -np.cos(X * 0.5)  # XXX really?
         y = np.sin(X * 0.5).ravel()
 
         # TODO cosine kernel for z
-        kx = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        kz = RBF(length_scale=0.1, length_scale_bounds=(0.1, 0.1))
-        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
-        arms_z = list(np.linspace(-1, 1, 20).reshape(-1, 1))
-        arms_y = list(np.linspace(-1, 1, 20))
+        arms_z = np.linspace(-1, 1, 5).reshape(-1, 1)
+        arms_y = np.linspace(-1, 1, 5)
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
