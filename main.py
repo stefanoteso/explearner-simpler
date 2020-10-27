@@ -31,7 +31,22 @@ DATASETS = {
 }
 
 
-def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
+def evaluate_fold(dataset, tr, ts, args, rng=None):
+    """Run EXPLEARN on a given kn-tr-ts fold.
+
+    Arguments
+    ---------
+    dataset : explearner.Dataset
+        The dataset.
+    tr : list of int
+        Indices of contexts sampled during training.
+    ts : list of int
+        Indices of contexts used for measuring generalization-across-contexts.
+    args : Arguments
+        The command-line arguments.
+    rng : None or int or RandomState, defaults to None
+        The RNG.
+    """
     rng = check_random_state(rng)
     Xsize = dataset.X.shape[0]
     delta = 0.8
@@ -40,12 +55,19 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
                 strategy=args.strategy,
                 random_state=rng)
 
-    # The observed arms and (noisy) rewards
-    observed_X = [dataset.X[i] for i in kn]
-    observed_Z = [dataset.Z[i] for i in kn]
-    observed_y = [dataset.y[i] for i in kn]
-    observed_f = [dataset.reward(i, dataset.Z[i], dataset.y[i], noise=args.noise)
-                  for i in kn]
+    # Observe the reward of some random context-arm pairs
+    n_known = (args.p_known if args.p_known > 1 else
+               max(1, np.ceil(len(tr) * args.p_known)))
+    observed_X, observed_Z, observed_y, observed_f = [], [], [], []
+    for _ in range(int(n_known)):
+        i = rng.choice(tr)
+        arm = dataset.arms[rng.choice(len(dataset.arms))]
+        observed_X.append(dataset.X[i])
+        observed_Z.append(arm[0])
+        observed_y.append(arm[1])
+        observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
+
+    print(f'running fold:  #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
     trace = []
     for t in range(args.n_iters):
@@ -58,6 +80,8 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
 
         # Select a context
         i = rng.choice(tr)
+
+        # TODO plot reward function over time for train contexts
 
         # Select a query arm and observe the reward
         # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
@@ -89,18 +113,6 @@ def evaluate_fold(dataset, kn, tr, ts, args, rng=None):
         trace.append((regret, avg_test_regret))
 
     return trace
-
-
-def evaluate(dataset, args, rng=None):
-    rng = check_random_state(rng)
-
-    folds = []
-    for k, (kn, tr, ts) in enumerate(dataset.split(args.n_splits)):
-        print(f'fold {k}: |known|={len(kn)} |train|={len(tr)} |test|={len(ts)}')
-        folds.append((kn, tr, ts))
-
-    return [evaluate_fold(dataset, kn, tr, ts, args, rng=rng)
-            for kn, tr, ts in folds]
 
 
 def _get_basename(args):
@@ -142,7 +154,7 @@ def main():
     group.add_argument('-k', '--n-splits', type=int, default=5,
                        help='Number of cross-validation folds')
     group.add_argument('-K', '--p-known', type=float, default=0.01,
-                       help='Proportion of initial labelled examples')
+                       help='Proportion of seed context-arm rewards')
     group.add_argument('-T', '--n-iters', type=int, default=100,
                        help='Maximum number of learning iterations')
 
@@ -155,7 +167,8 @@ def main():
     rng = np.random.RandomState(args.seed)
 
     dataset = DATASETS[args.dataset](combiner=args.combiner, rng=rng)
-    traces = evaluate(dataset, args, rng=rng)
+    traces = [evaluate_fold(dataset, tr, ts, args, rng=rng)
+            for tr, ts in list(dataset.split(args.n_splits))]
 
     path = _get_basename(args) + '__trace.pickle'
     dump(join('results', path), {

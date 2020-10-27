@@ -86,11 +86,9 @@ class Dataset(ABC):
     def split(self, n_splits):
         """Iterate over folds."""
         kfold = KFold(n_splits=n_splits, shuffle=True, random_state=self.rng)
-        for tr, ts in enumerate(kfold.split(self.X)):
-            n_known = max(1, int(np.ceil(len(tr) * args.p_known)))
-            kn = self.rng.permutation(tr)[:n_known]
+        for tr, ts in kfold.split(self.X):
             ts = self.rng.permutation(ts)[:20] # XXX
-            yield kn, tr, ts
+            yield tr, ts
 
     def select_model(self, clf, X, y, grid):
         """Selects a model using grid search."""
