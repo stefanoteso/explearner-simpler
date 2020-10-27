@@ -109,8 +109,8 @@ class NormNormRewardMixin:
 
     def reward(self, i, zhat, yhat, noise=0):
         z, y = self.Z[i, 0], self.y[i]
-        reward_z = norm(loc=z, scale=0.5).pdf(zhat[0])
-        reward_y = norm(loc=y, scale=0.5).pdf(yhat)
+        reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
+        reward_y = norm(loc=y, scale=0.1).pdf(yhat)
         return reward_z * reward_y + self.rng.normal(0, noise)
 
 
@@ -119,22 +119,22 @@ class DebugDataset(NormNormRewardMixin, Dataset):
 
     def __init__(self, **kwargs):
         X = np.linspace(0, 0, num=1).reshape(-1, 1)
-        Z = np.ones((X.shape[0], 1))
+        Z = np.zeros((X.shape[0], 1))
         y = np.array([np.dot(x, z) for (x, z) in zip(X, Z)])
 
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
         kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
-        ky = DotProduct(sigma_0=0.01, sigma_0_bounds=(0.01, 0.01))
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
-        arms_z = list(np.linspace(-1, 1, 5).reshape(-1, 1))
-        arms_y = list(np.linspace(-1, 1, 5))
+        arms_z = np.linspace(-1, 1, 5).reshape(-1, 1)
+        arms_y = np.linspace(-1, 1, 5)
         arms = list(product(arms_z, arms_y))
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
     def split(self, n_splits):
         the_only_ctx = np.array([0])
-        return the_only_ctx, the_only_ctx
+        yield the_only_ctx, the_only_ctx
 
 
 class LineDataset(NormNormRewardMixin, Dataset):

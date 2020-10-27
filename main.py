@@ -1,6 +1,7 @@
 import numpy as np
 
 from sklearn.utils import check_random_state
+from itertools import product
 from os.path import join
 
 from explearner import *
@@ -33,6 +34,26 @@ DATASETS = {
 }
 
 
+def evaluate_iter(dataset, gp, i, ts):
+    # XXX we distinguish between query arm and predicted arm so that random
+    # selection and UCB can be compared fairly
+
+    # Predict and compute the regret of the best arm
+    zbest, ybest = gp.predict_arm(dataset, dataset.X[i])
+    pred_regret = dataset.regret(i, zbest, ybest)
+
+    # Compute the average regret over the test contexts
+    test_regrets = []
+    for j in ts:
+        zhat, yhat = gp.predict_arm(dataset, dataset.X[j])
+        test_regrets.append(dataset.regret(j, zhat, yhat))
+    test_regret = np.mean(test_regrets)
+
+    print(f'iter: {pred_regret:5.3f} {test_regret:5.3f}  ctx {i}  true=({dataset.Z[i]}, {dataset.y[i]}) pred=({zbest}, {ybest})')
+
+    return pred_regret, test_regret
+
+
 def evaluate_fold(dataset, tr, ts, args, rng=None):
     """Run EXPLEARN on a given kn-tr-ts fold.
 
@@ -58,21 +79,34 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
                 random_state=rng)
 
     # Observe the reward of some random context-arm pairs
-    n_known = (args.p_known if args.p_known > 1 else
-               max(1, np.ceil(len(tr) * args.p_known)))
     observed_X, observed_Z, observed_y, observed_f = [], [], [], []
-    for _ in range(int(n_known)):
-        i = rng.choice(tr)
-        arm = dataset.arms[rng.choice(len(dataset.arms))]
-        observed_X.append(dataset.X[i])
-        observed_Z.append(arm[0])
-        observed_y.append(arm[1])
-        observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
+    if True:
+        n_known = (args.p_known if args.p_known > 1 else
+                   max(1, np.ceil(len(tr) * args.p_known)))
+        for _ in range(int(n_known)):
+            i = rng.choice(tr)
+            arm = dataset.arms[rng.choice(len(dataset.arms))]
+            observed_X.append(dataset.X[i])
+            observed_Z.append(arm[0])
+            observed_y.append(arm[1])
+            observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
+        n_iters = args.n_iters
+    else:
+        # XXX passive learning
+        for i, arm in product(range(len(dataset.X)), dataset.arms):
+            observed_X.append(dataset.X[i])
+            observed_Z.append(arm[0])
+            observed_y.append(arm[1])
+            observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
+        n_iters = 1
 
     print(f'running fold:  #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
     trace = []
-    for t in range(args.n_iters):
+    pred_regret, test_regret = evaluate_iter(dataset, gp, i, ts)
+    trace.append((pred_regret, test_regret))
+
+    for t in range(n_iters):
 
         # Fit the GP on the observed data
         gp.fit(np.array(observed_X),
@@ -80,10 +114,20 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
                np.array(observed_y),
                np.array(observed_f))
 
+        # XXX DEBUG
+        # from pprint import pprint
+        # pprint(list(zip(observed_X, observed_Z, observed_y, observed_f)))
+        # for i, arm in product(range(len(dataset.X)), dataset.arms):
+        #     x = dataset.X[i]
+        #     z = arm[0]
+        #     y = arm[1]
+        #     tempx = x.reshape((1, -1))
+        #     tempz = z.reshape((1, -1))
+        #     tempy = np.array([y])
+        #     print(f'reward @ ({z}, {y}): true={dataset.reward(0, z, y):7.4f} pred={gp.predict(tempx, tempz, tempy)[0]:7.4f}')
+
         # Select a context
         i = rng.choice(tr)
-
-        # TODO plot reward function over time for train contexts
 
         # Select a query arm and observe the reward
         # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
@@ -98,21 +142,8 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
         observed_y.append(yhat)
         observed_f.append(fhat)
 
-        # Predict and compute the regret
-        # XXX I am distinguishing between query and prediction so that random
-        # selection and UCB can be compared fairly
-        zbest, ybest = gp.predict_arm(dataset, dataset.X[i])
-        regret = dataset.regret(i, zbest, ybest)
-
-        # Compute the average regret over the test contexts
-        test_regrets = []
-        for j in ts:
-            zhat, yhat = gp.predict_arm(dataset, dataset.X[j])
-            test_regrets.append(dataset.regret(j, zhat, yhat))
-        avg_test_regret = np.mean(test_regrets)
-
-        print(f'iter {t:2d}:  {regret:5.3f} {avg_test_regret:5.3f}  ctx {i}  y: {dataset.y[i]} vs {ybest}  z: {dataset.Z[i]} vs {zbest}')
-        trace.append((regret, avg_test_regret))
+        pred_regret, test_regret = evaluate_iter(dataset, gp, i, ts)
+        trace.append((pred_regret, test_regret))
 
     return trace
 
