@@ -111,8 +111,8 @@ class NormNormRewardMixin:
 
     def reward(self, i, zhat, yhat, noise=0):
         z, y = self.Z[i, 0], self.y[i]
-        reward_z = norm(loc=z, scale=0.1).pdf(zhat[0])
-        reward_y = norm(loc=y, scale=0.1).pdf(yhat)
+        reward_z = norm(loc=z, scale=0.5).pdf(zhat[0])
+        reward_y = norm(loc=y, scale=0.5).pdf(yhat)
         return reward_z * reward_y + self.rng.normal(0, noise)
 
 
