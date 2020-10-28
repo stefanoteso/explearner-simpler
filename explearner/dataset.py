@@ -23,7 +23,7 @@ from sympy.utilities.iterables import multiset_permutations
 
 from treeinterpreter import treeinterpreter as ti
 
-from . import KendallKernel, rank_items, kendall_tau_dist
+from . import KendallKernel, rank_items, kendall_tau_dist, dump
 from .kernel import CombinerKernel
 
 
@@ -183,6 +183,10 @@ _COLORS = [
     (128, 0, 255),  # v
 ]
 _COLOR_TO_INDEX = {tuple(color): i for i, color in enumerate(_COLORS)}
+_RULE_TO_COORDS = {
+    0: [[0, 0], [0, 4], [4, 0], [4, 4]],
+    1: [[0, 1], [0, 2], [0, 3]]
+}
 
 
 class ColorsDataset(Dataset):
@@ -190,8 +194,9 @@ class ColorsDataset(Dataset):
 
     def __init__(self, **kwargs):
         self.rule = kwargs.pop('rule')
+        self.kind = kwargs.pop('kind', 'relevance')
 
-        path = join('data', f'toy_colors_{self.rule}.pickle')
+        path = join('data', f'toy_colors_{self.kind}_{self.rule}.pickle')
         try:
             X, Z, y = load(path)
         except:
@@ -201,19 +206,30 @@ class ColorsDataset(Dataset):
             X_ts = np.array([self._img_to_x(img) for img in data['arr_1']])
             X = np.vstack([X_tr, X_ts])
 
-            y_tr = np.array([self._classify(x) for x in X_tr])
-            y_ts = np.array([self._classify(x) for x in X_ts])
+            y_tr = np.array([self._classify(x, self.rule) for x in X_tr])
+            y_ts = np.array([self._classify(x, self.rule) for x in X_ts])
             y = np.hstack([y_tr, y_ts])
 
-            Z = np.array([self._explain(x) for x in X])
+            if self.kind == 'relevance':
+                Z = np.array([self._explain_relevance(x, self.rule) for x in X])
+            elif self.kind == 'polarity':
+                Z = np.array([self._explain_polarity(x, self.rule) for x in X])
+            else:
+                raise ValueError(f'kind must be "relevance" or "polarity"')
+
             dump(path, (X, Z, y))
 
-        # kx = gpflow.kernels.RBF(active_dims=list(range(0, 25)))
-        # kz = gpflow.kernels.RBF(active_dims=list(range(25, 50)))
-        # ky = gpflow.kernels.Linear(active_dims=[50])
+        # FIXME: for x and z use k-pixel kernels
+        kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
-        arms = self._enumerate_arms()
-        super().__init__(X, Z, y, [0, 0, 0], arms, **kwargs)
+        if self.kind == 'relevance':
+            arms = self._enumerate_relevance_arms(self.rule)
+        else:
+            arms = self._enumerate_polairty_arms(self.rule)
+
+        super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
     @staticmethod
     def _img_to_x(img):
@@ -223,28 +239,41 @@ class ColorsDataset(Dataset):
         return np.array(x, dtype=np.float32)
 
     @staticmethod
-    def _rule0(x):
-        return int(x[0, 0] == x[0, 4] and x[0, 0] == x[4, 0] and x[0, 0] == x[4, 4])
+    def _classify(x, rule):
+        """Computes the ground-truth label."""
+        x = x.reshape((5, 5))
+        if rule == 0:
+            return int(x[0, 0] == x[0, 4] and
+                       x[0, 0] == x[4, 0] and
+                       x[0, 0] == x[4, 4])
+        else:
+            return int(x[0, 1] != x[0, 2] and
+                       x[0, 1] != x[0, 3] and
+                       x[0, 2] != x[0, 3])
 
     @staticmethod
-    def _rule1(x):
-        return int(x[0, 1] != x[0, 2] and x[0, 1] != x[0, 3] and x[0, 2] != x[0, 3])
-
-    def _classify(self, x):
-        return {0: self._rule0, 1: self._rule1}[self.rule](x.reshape((5, 5)))
-
-    def _explain(self, x):
-        coords = {
-            0: [[0, 0], [0, 4], [4, 0], [4, 4]],
-            1: [[0, 1], [0, 2], [0, 3]]
-        }[self.rule]
-
+    def _explain_relevance(x, rule):
+        """Computes the relevance-based ground-truth explanation.  Notice
+        that relevance explanations are independent of x and y."""
         x = x.reshape((5, 5))
+        coords = _RULE_TO_COORDS[rule]
+
+        z = np.zeros_like(x, dtype=np.int8)
+        for r, c in coords:
+            z[r, c] = 1
+        return z.ravel()
+
+    @staticmethod
+    def _explain_polarity(x, rule):
+        """Computes the polarity-based ground-truth explanation."""
+        x = x.reshape((5, 5))
+        coords = _RULE_TO_COORDS[rule]
+
         counts = np.bincount([x[r, c] for r, c in coords])
         max_count, max_value = np.max(counts), np.argmax(counts)
 
-        z = np.zeros_like(x, dtype=np.float32)
-        if self.rule == 0:
+        z = np.zeros_like(x, dtype=np.int8)
+        if rule == 0:
             for r, c in coords:
                 weight = 1 if max_count != 1 and x[r, c] == max_value else -1
                 z[r, c] = weight
@@ -254,22 +283,38 @@ class ColorsDataset(Dataset):
                 z[r, c] = weight
         return z.ravel()
 
-    def _enumerate_arms(self):
-        """Enumerate all possible (explanation, label) pairs.  Basically it
-        enumerates all possible 3 or 4 pixels depending on the rule and assigns
-        them all possible signs."""
-        n_coords = 4 if self.rule == 0 else 3
-        polarities = list(product(*(([0, 1],) * n_coords)))
+    @staticmethod
+    def _enumerate_relevance_arms(rule):
+        """Enumerate all masks of k pixels."""
+        k = 4 if rule == 0 else 3
+
+        coords = product(range(5), repeat=2)
+        ktuples = combinations(coords, k)
 
         arms = []
-        all_coords = product(range(5), repeat=2)
-        for coords in combinations(all_coords, n_coords):
-            for signs in polarities:
-                for label in [-1, 1]:
-                    z = np.zeros((5, 5), dtype=np.int8)
-                    for (r, c), s in zip(coords, signs):
-                        z[r, c] = 2 * s - 1
-                    arms.append((z.reshape(5 * 5), label))
+        for ktuple, label in product(ktuples, [-1, 1]):
+            z = np.zeros((5, 5), dtype=np.int8)
+            for r, c in ktuple:
+                z[r, c] = 1
+            arms.append((z.reshape(5 * 5), label))
+
+        return arms
+
+    @staticmethod
+    def _enumerate_polarity_arms(rule):
+        """Enumerate all masks of k pixels with per-pixel pos/neg labels."""
+        k = 4 if rule == 0 else 3
+
+        coords = product(range(5), repeat=2)
+        ktuples = combinations(coords, k)
+        signs = product(*(([-1, 1],) * k))
+
+        arms = []
+        for ktuple, ktuple_sign, label in product(ktuples, signs, [-1, 1]):
+            z = np.zeros((5, 5), dtype=np.int8)
+            for (r, c), s in zip(ktuple, ktuple_sign):
+                z[r, c] = s
+            arms.append((z.reshape(5 * 5), label))
 
         return arms
 

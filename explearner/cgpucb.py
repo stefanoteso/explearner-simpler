@@ -28,7 +28,7 @@ class CGPUCB(GPR):
 
         def mean_reward(arm):
             z, y = arm
-            return self.predict(x, np.array([z]), y[None, None])[0]
+            return self.predict(x, np.array([z]), np.array([[y]]))[0]
 
         return max(dataset.arms, key=mean_reward)
 
@@ -38,7 +38,7 @@ class CGPUCB(GPR):
 
         def ucb(arm):
             z, y = arm
-            mean, std = self.predict(x, np.array([z]), y[None, None],
+            mean, std = self.predict(x, np.array([z]), np.array([[y]]),
                                      return_std=True)
             return mean[0] + np.sqrt(beta) * std[0]
 
