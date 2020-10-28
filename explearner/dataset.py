@@ -176,13 +176,12 @@ class SineDataset(NormNormRewardMixin, Dataset):
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
 
-_COLORS = [
-    (255, 0, 0),  # r
-    (0, 255, 0),  # g
-    (0, 128, 255),  # b
-    (128, 0, 255),  # v
-]
-_COLOR_TO_INDEX = {tuple(color): i for i, color in enumerate(_COLORS)}
+_COLOR_TO_OHE = {
+    (255, 0, 0):   (1, 0, 0, 0),  # r
+    (0, 255, 0):   (0, 1, 0, 0),  # g
+    (0, 128, 255): (0, 0, 1, 0),  # b
+    (128, 0, 255): (0, 0, 0, 1),  # v
+}
 _RULE_TO_COORDS = {
     0: [[0, 0], [0, 4], [4, 0], [4, 4]],
     1: [[0, 1], [0, 2], [0, 3]]
@@ -191,6 +190,10 @@ _RULE_TO_COORDS = {
 
 class ColorsDataset(Dataset):
     """Toy dataset used by RRR and CAIPI."""
+
+    # TODO: implement one-hot X and polynomial kernel
+    # TODO: run on all training images
+    # TOOD: run on all arms
 
     def __init__(self, **kwargs):
         self.rule = kwargs.pop('rule')
@@ -243,32 +246,31 @@ class ColorsDataset(Dataset):
     @staticmethod
     def _img_to_x(img):
         img = img.reshape((5, 5, 3))
-        x = [_COLOR_TO_INDEX[tuple(img[r, c])]
+        x = [_COLOR_TO_OHE[tuple(img[r, c])]
              for r, c in product(range(5), repeat=2)]
-        return np.array(x, dtype=np.float32)
+        return np.array(x, dtype=np.int8).ravel()
 
     @staticmethod
     def _classify(x, rule):
         """Computes the ground-truth label."""
-        x = x.reshape((5, 5))
+        x = x.reshape((5, 5, 4))
         if rule == 0:
-            r = int(x[0, 0] == x[0, 4] and
-                    x[0, 0] == x[4, 0] and
-                    x[0, 0] == x[4, 4])
+            r = int((x[0, 0] == x[0, 4]).all() and
+                    (x[0, 0] == x[4, 0]).all() and
+                    (x[0, 0] == x[4, 4]).all())
         else:
-            r = int(x[0, 1] != x[0, 2] and
-                    x[0, 1] != x[0, 3] and
-                    x[0, 2] != x[0, 3])
+            r = int((x[0, 1] != x[0, 2]).all() and
+                    (x[0, 1] != x[0, 3]).all() and
+                    (x[0, 2] != x[0, 3]).all())
         return 2 * r - 1
 
     @staticmethod
     def _explain_relevance(x, rule):
         """Computes the relevance-based ground-truth explanation.  Notice
         that relevance explanations are independent of x and y."""
-        x = x.reshape((5, 5))
         coords = _RULE_TO_COORDS[rule]
 
-        z = np.zeros_like(x, dtype=np.int8)
+        z = np.zeros((5, 5), dtype=np.int8)
         for r, c in coords:
             z[r, c] = 1
         return z.ravel()
@@ -276,13 +278,15 @@ class ColorsDataset(Dataset):
     @staticmethod
     def _explain_polarity(x, rule):
         """Computes the polarity-based ground-truth explanation."""
-        x = x.reshape((5, 5))
+        raise NotImplementedError()
+
+        x = x.reshape((5, 5, 4))
         coords = _RULE_TO_COORDS[rule]
 
         counts = np.bincount([x[r, c] for r, c in coords])
         max_count, max_value = np.max(counts), np.argmax(counts)
 
-        z = np.zeros_like(x, dtype=np.int8)
+        z = np.zeros((5, 5), dtype=np.int8)
         if rule == 0:
             for r, c in coords:
                 weight = 1 if max_count != 1 and x[r, c] == max_value else -1
