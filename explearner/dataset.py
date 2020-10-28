@@ -23,7 +23,7 @@ from sympy.utilities.iterables import multiset_permutations
 
 from treeinterpreter import treeinterpreter as ti
 
-from . import KendallKernel, rank_items, kendall_tau_dist, dump
+from . import KendallKernel, rank_items, kendall_tau_dist, load, dump
 from .kernel import CombinerKernel
 
 
