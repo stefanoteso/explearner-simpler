@@ -27,9 +27,6 @@ from . import KendallKernel, rank_items, kendall_tau_dist, load, dump
 from .kernel import CombinerKernel
 
 
-# TODO move from X, Z, y to context, best_arm.
-
-
 class Dataset(ABC):
     """A dataset.
 
@@ -191,7 +188,6 @@ _RULE_TO_COORDS = {
 class ColorsDataset(Dataset):
     """Toy dataset used by RRR and CAIPI."""
 
-    # TODO: implement one-hot X and polynomial kernel
     # TODO: run on all training images
     # TOOD: run on all arms
 
@@ -227,7 +223,6 @@ class ColorsDataset(Dataset):
         Z = Z[:10]
         y = y[:10]
 
-        # FIXME: for x and z use k-pixel kernels
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
         kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
         ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
