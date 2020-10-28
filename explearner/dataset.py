@@ -219,6 +219,11 @@ class ColorsDataset(Dataset):
 
             dump(path, (X, Z, y))
 
+        # XXX
+        X = X[:10]
+        Z = Z[:10]
+        y = y[:10]
+
         # FIXME: for x and z use k-pixel kernels
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
         kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
@@ -230,6 +235,10 @@ class ColorsDataset(Dataset):
             arms = self._enumerate_polairty_arms(self.rule)
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
+
+        # XXX keep only explanations with "extreme" rewards
+        self.arms = [arm for arm in self.arms
+                     if np.abs(self.reward(0, arm[0], arm[1])) >= 0.5]
 
     @staticmethod
     def _img_to_x(img):
@@ -243,13 +252,14 @@ class ColorsDataset(Dataset):
         """Computes the ground-truth label."""
         x = x.reshape((5, 5))
         if rule == 0:
-            return int(x[0, 0] == x[0, 4] and
-                       x[0, 0] == x[4, 0] and
-                       x[0, 0] == x[4, 4])
+            r = int(x[0, 0] == x[0, 4] and
+                    x[0, 0] == x[4, 0] and
+                    x[0, 0] == x[4, 4])
         else:
-            return int(x[0, 1] != x[0, 2] and
-                       x[0, 1] != x[0, 3] and
-                       x[0, 2] != x[0, 3])
+            r = int(x[0, 1] != x[0, 2] and
+                    x[0, 1] != x[0, 3] and
+                    x[0, 2] != x[0, 3])
+        return 2 * r - 1
 
     @staticmethod
     def _explain_relevance(x, rule):

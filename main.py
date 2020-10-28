@@ -49,7 +49,7 @@ def evaluate_iter(dataset, gp, i, ts):
         test_regrets.append(dataset.regret(j, zhat, yhat))
     test_regret = np.mean(test_regrets)
 
-    print(f'iter: {pred_regret:5.3f} {test_regret:5.3f}  ctx {i}  true=({dataset.Z[i]}, {dataset.y[i]}) pred=({zbest}, {ybest})')
+    print(f'iter: best reg={pred_regret:5.3f} test reg={test_regret:5.3f}  ctx {i}  true=({dataset.Z[i]}, {dataset.y[i]}) pred=({zbest}, {ybest})')
 
     return pred_regret, test_regret
 
