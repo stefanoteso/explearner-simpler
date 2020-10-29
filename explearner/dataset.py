@@ -362,10 +362,6 @@ class AdultDataset(Dataset):
 
 
 class TreeDataset(Dataset):
-    @abstractmethod
-    def reward(self, i, zhat, yhat, noise=0):
-        pass
-
     def root_to_leaf_paths(self, node_id):
         """
         Finds all root-to-leaf paths in a decision tree.
@@ -391,7 +387,6 @@ class TreeDataset(Dataset):
 
     def reward(self, i, zhat, yhat, noise=0):
         z, y = self.Z[i], self.y[i]
-
         sign = 1 if y == yhat else -1
         return sign * (jaccard_score(z, zhat)) + self.rng.normal(0, noise)
 
