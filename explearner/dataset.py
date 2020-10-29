@@ -234,10 +234,6 @@ class ColorsDataset(Dataset):
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
-        # XXX keep only explanations with "extreme" rewards
-        self.arms = [arm for arm in self.arms
-                     if np.abs(self.reward(0, arm[0], arm[1])) >= 0.5]
-
     @staticmethod
     def _img_to_x(img):
         img = img.reshape((5, 5, 3))
