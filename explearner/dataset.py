@@ -195,7 +195,6 @@ class ColorsDataset(Dataset):
     """Toy dataset used by RRR and CAIPI."""
 
     # TODO: run on all training images
-    # TOOD: run on all arms
 
     def __init__(self, **kwargs):
         self.rule = kwargs.pop('rule')
