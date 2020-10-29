@@ -179,6 +179,12 @@ _COLOR_TO_OHE = {
     (0, 128, 255): (0, 0, 1, 0),  # b
     (128, 0, 255): (0, 0, 0, 1),  # v
 }
+_OHE_TO_VALUE = {
+    (1, 0, 0, 0): 0,
+    (0, 1, 0, 0): 1,
+    (0, 0, 1, 0): 2,
+    (0, 0, 0, 1): 3,
+}
 _RULE_TO_COORDS = {
     0: [[0, 0], [0, 4], [4, 0], [4, 4]],
     1: [[0, 1], [0, 2], [0, 3]]
@@ -230,7 +236,7 @@ class ColorsDataset(Dataset):
         if self.kind == 'relevance':
             arms = self._enumerate_relevance_arms(self.rule)
         else:
-            arms = self._enumerate_polairty_arms(self.rule)
+            arms = self._enumerate_polarity_arms(self.rule)
 
         super().__init__(X, Z, y, kx, kz, ky, arms, **kwargs)
 
@@ -269,22 +275,23 @@ class ColorsDataset(Dataset):
     @staticmethod
     def _explain_polarity(x, rule):
         """Computes the polarity-based ground-truth explanation."""
-        raise NotImplementedError()
-
-        x = x.reshape((5, 5, 4))
         coords = _RULE_TO_COORDS[rule]
 
-        counts = np.bincount([x[r, c] for r, c in coords])
+        x = x.reshape((5, 5, 4))
+        pix = np.array([_OHE_TO_VALUE[tuple(x[r, c, :])]
+                       for r, c in product(range(5), repeat=2)]).reshape(5, 5)
+
+        counts = np.bincount([pix[r, c] for r, c in coords])
         max_count, max_value = np.max(counts), np.argmax(counts)
 
         z = np.zeros((5, 5), dtype=np.int8)
         if rule == 0:
             for r, c in coords:
-                weight = 1 if max_count != 1 and x[r, c] == max_value else -1
+                weight = 1 if max_count != 1 and pix[r, c] == max_value else -1
                 z[r, c] = weight
         else:
             for r, c in coords:
-                weight = 1 if max_count == 1 or x[r, c] != max_value else -1
+                weight = 1 if max_count == 1 or pix[r, c] != max_value else -1
                 z[r, c] = weight
         return z.ravel()
 

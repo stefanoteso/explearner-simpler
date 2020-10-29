@@ -19,10 +19,18 @@ DATASETS = {
         LineDataset,
     'sine':
         SineDataset,
-    'colors-0':
-        lambda *args, **kwargs: ColorsDataset(*args, rule=0, **kwargs),
-    'colors-1':
-        lambda *args, **kwargs: ColorsDataset(*args, rule=1, **kwargs),
+    'colors-0-relevance':
+        lambda *args, **kwargs:
+            ColorsDataset(*args, rule=0, kind='relevance', **kwargs),
+    'colors-1-relevance':
+        lambda *args, **kwargs:
+            ColorsDataset(*args, rule=1, kind='relevance', **kwargs),
+    'colors-0-polarity':
+        lambda *args, **kwargs:
+            ColorsDataset(*args, rule=0, kind='polarity', **kwargs),
+    'colors-1-polarity':
+        lambda *args, **kwargs:
+            ColorsDataset(*args, rule=1, kind='polarity', **kwargs),
 
     # Datasets with explanations extracted from a model
     'bank':
@@ -99,7 +107,7 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
             observed_f.append(dataset.reward(i, arm[0], arm[1], noise=args.noise))
         n_iters = args.n_iters
 
-    print(f'running fold:  #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
+    print(f'running fold:  #arms={len(dataset.arms)} - #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
     trace = [evaluate_iter(dataset, gp, i, ts)]
     for t in range(n_iters):
