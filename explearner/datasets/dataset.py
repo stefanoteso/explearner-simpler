@@ -1,3 +1,4 @@
+import os, requests
 import numpy as np
 
 from abc import ABC, abstractmethod
@@ -62,6 +63,22 @@ class Dataset(ABC):
         r = self.reward(i, self.Z[i], self.y[i]) - self.reward(i, zhat, yhat)
         assert r >= 0
         return r
+
+    @staticmethod
+    def load_dataset(path, urls):
+        """
+        Download the content for a list of URLs and save them to a folder
+        :param path: The path to the location where the data will be saved
+        :param urls: The list of URLs from which the content will be downloaded and saved
+        """
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        for url in urls:
+            data = requests.get(url).content
+            filename = os.path.join(path, os.path.basename(url))
+            with open(filename, "wb") as file:
+                file.write(data)
 
     def split(self, n_splits):
         """Iterate over folds."""
