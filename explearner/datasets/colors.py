@@ -1,6 +1,6 @@
 import numpy as np
-import os
 
+from os.path import join
 from sklearn.gaussian_process.kernels import RBF
 from itertools import product, combinations
 
@@ -29,17 +29,15 @@ _RULE_TO_COORDS = {
 class ColorsDataset(EqCosRewardMixin, Dataset):
     """Toy dataset used by RRR and CAIPI."""
 
-    # TODO: run on all training images
-
     def __init__(self, **kwargs):
         self.rule = kwargs.pop('rule')
         self.kind = kwargs.pop('kind', 'relevance')
 
-        path = os.path.join('data', f'toy_colors_{self.kind}_{self.rule}.pickle')
+        path = join('data', f'toy_colors_{self.kind}_{self.rule}.pickle')
         try:
             X, Z, y = load(path)
         except:
-            data = np.load(os.path.join('data', 'toy_colors.npz'))
+            data = np.load(join('data', 'toy_colors.npz'))
 
             X_tr = np.array([self._img_to_x(img) for img in data['arr_0']])
             X_ts = np.array([self._img_to_x(img) for img in data['arr_1']])
@@ -58,7 +56,7 @@ class ColorsDataset(EqCosRewardMixin, Dataset):
 
             dump(path, (X, Z, y))
 
-        # XXX
+        # TODO: run on all training images
         X = X[:10]
         Z = Z[:10]
         y = y[:10]
