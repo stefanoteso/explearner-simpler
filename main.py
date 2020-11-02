@@ -35,10 +35,10 @@ DATASETS = {
     # Datasets with explanations extracted from a model
     'bank':
         BanknoteAuth,
-    'adult-lm':
-        lambda *args, **kwargs: AdultDataset(*args, clf='lm', **kwargs),
-    'adult-dt':
-        lambda *args, **kwargs: AdultDataset(*args, clf='dt', **kwargs),
+    'heart-lm':
+        lambda *args, **kwargs: HeartDataset(*args, clf='lm', **kwargs),
+    'heart-dt':
+        lambda *args, **kwargs: HeartDataset(*args, clf='dt', **kwargs),
 }
 
 

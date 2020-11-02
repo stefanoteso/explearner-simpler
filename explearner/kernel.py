@@ -1,6 +1,5 @@
 import numpy as np
 from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin, Kernel
-from scipy.stats import kendalltau
 
 from explearner import kendall_tau_dist
 
