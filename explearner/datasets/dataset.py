@@ -87,10 +87,10 @@ class Dataset(ABC):
             ts = self.rng.permutation(ts)[:20] # XXX
             yield tr, ts
 
-    def select_model(self, clf, X, y, grid):
+    def select_model(self, clf, X, y, grid, scoring='f1_micro'):
         """Selects a model using grid search."""
         # TODO move to model-based dataset subclass
-        clf = GridSearchCV(clf, grid, scoring='f1_micro').fit(X, y)
+        clf = GridSearchCV(clf, grid, scoring=scoring).fit(X, y)
 
         print(f'best params: {clf.best_params_}')
         means = clf.cv_results_['mean_test_score']
