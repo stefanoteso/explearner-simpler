@@ -148,24 +148,25 @@ class EqKendallRewardMixin:
 
 
 class TreeDataset(Dataset):
-    def root_to_leaf_paths(self, node_id):
+
+    def root_to_leaf_paths(self, tree, node_id):
         """
         Finds all root-to-leaf paths in a decision tree.
         Returns: All paths from root-to-leaf
         """
-        # The node is a leaf
-        if self.tree.children_left[node_id] == self.tree.children_right[node_id]:
-            path = np.zeros(self.tree.node_count)
+        if tree.children_left[node_id] == tree.children_right[node_id]:
+            # The node is a leaf
+            path = np.zeros(tree.node_count)
             path[node_id] = 1
             return [path]
-        # Recursively scan left and right children
         else:
+            # Recursively scan left and right children
             paths = []
-            left_paths = self.root_to_leaf_paths(self.tree.children_left[node_id])
+            left_paths = self.root_to_leaf_paths(tree, tree.children_left[node_id])
             for path in left_paths:
                 path[node_id] = 1
                 paths.append(path)
-            right_paths = self.root_to_leaf_paths(self.tree.children_right[node_id])
+            right_paths = self.root_to_leaf_paths(tree, tree.children_right[node_id])
             for path in right_paths:
                 path[node_id] = 1
                 paths.append(path)
