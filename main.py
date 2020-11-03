@@ -35,10 +35,6 @@ DATASETS = {
     # Datasets with explanations extracted from a model
     'banknote':
         BanknoteAuth,
-    'heart-lm':
-        lambda *args, **kwargs: HeartDataset(*args, clf='lm', **kwargs),
-    'heart-dt':
-        lambda *args, **kwargs: HeartDataset(*args, clf='dt', **kwargs),
     'wine':
         WineQuality,
 }
