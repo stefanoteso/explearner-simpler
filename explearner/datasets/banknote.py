@@ -47,7 +47,7 @@ class BanknoteAuth(EqJaccardRewardMixin, TreeDataset):
 
         # Extract all possible root-to-leaf explanations
         # XXX the set of arms should be the set of *all* possible paths
-        arms_z = self.root_to_leaf_paths(0)
+        arms_z = self.root_to_leaf_paths(clf.tree_, 0)
         arms_y = np.array([0, 1])
         arms = list(product(arms_z, arms_y))
 
