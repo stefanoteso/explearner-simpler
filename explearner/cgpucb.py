@@ -29,7 +29,7 @@ class CGPUCB(GPR):
                              dtype=object)
             X = np.vstack((x,) * len(batch))
             Z = np.vstack(tuple(batch[:, 0]))
-            y = batch[:, 1]
+            y = batch[:, 1].astype(float)
 
             if requires_std:
                 mean, std = self.predict(X, Z, y, return_std=True)
