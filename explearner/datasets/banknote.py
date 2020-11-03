@@ -24,14 +24,16 @@ class BanknoteAuth(EqJaccardRewardMixin, TreeDataset):
         dataset = pd.read_csv(join('data', 'data_banknote_authentication.txt'),
                               names=columns)
 
-        y = dataset['class'].to_numpy()
         X = dataset.drop('class', axis=1).to_numpy()
+        y = dataset['class'].to_numpy()
 
-        clf = DecisionTreeClassifier()
-        clf = clf.fit(X, y)
-        self.tree = clf.tree_
-        # Extremely sparse explanations
-        Z = clf.decision_path(X).toarray()
+        grid = {
+            'max_depth': [5, 10, None],
+            'max_features': ['auto', None],
+            'random_state': [0],
+        }
+        clf = self.select_model(DecisionTreeClassifier(), X, y, grid).fit(X, y)
+        Z = clf.decision_path(X).toarray().astype(np.int)
 
         # Avoid sparse features - Maybe in the future
         # decision_path = clf.decision_path(X).toarray()
@@ -40,8 +42,8 @@ class BanknoteAuth(EqJaccardRewardMixin, TreeDataset):
         # Z = np.array(Z)
 
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
-        kz = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
-        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
         # Extract all possible root-to-leaf explanations
         # XXX the set of arms should be the set of *all* possible paths
