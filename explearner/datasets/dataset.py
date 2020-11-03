@@ -8,7 +8,7 @@ from sklearn.metrics import jaccard_score
 from scipy.stats import norm
 from sklearn.utils import check_random_state
 
-from .. import CombinerKernel
+from .. import CombinerKernel, kendall_tau_dist
 
 
 class Dataset(ABC):

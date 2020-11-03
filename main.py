@@ -35,6 +35,8 @@ DATASETS = {
     # Datasets with explanations extracted from a model
     'banknote':
         BanknoteAuth,
+    'breast':
+        BreastCancer,
     'wine':
         WineQuality,
 }
