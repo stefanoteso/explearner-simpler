@@ -5,7 +5,7 @@ from os.path import join
 from itertools import product
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.gaussian_process.kernels import RBF, DotProduct
-from sklearn import preprocessing
+from sklearn.preprocessing import StandardScaler
 
 from . import TreeDataset, NormJaccardRewardMixin
 
@@ -27,22 +27,25 @@ class WineQuality(NormJaccardRewardMixin, TreeDataset):
         dataset = pd.read_csv(join('data', 'winequality-white.csv'), sep=';')
 
         # target values: wine quality, values from 3-9
-        y = dataset['quality'].to_numpy()
         X = dataset.drop('quality', axis=1).to_numpy()
-        scaler = preprocessing.StandardScaler().fit(X)
-        X = scaler.transform(X)
+        X = StandardScaler().fit_transform(X)
+        y = dataset['quality'].to_numpy()
 
-        clf = DecisionTreeRegressor()
-        clf = clf.fit(X, y)
-        self.tree = clf.tree_
-        # Extremely sparse explanations
-        Z = clf.decision_path(X).toarray()
+        grid = {
+            'max_depth': [5, 10, None],
+            'max_features': ['auto', None],
+            'random_state': [0],
+        }
+        clf = self.select_model(DecisionTreeRegressor(), X, y, grid,
+                                scoring='neg_mean_squared_error')
+        clf.fit(X, y)
+        Z = clf.decision_path(X).toarray().astype(np.int)
 
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
-        kz = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        kz = RBF(length_scale=1, length_scale_bounds=(1, 1))
         ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
-        arms_z = self.root_to_leaf_paths(0)
+        arms_z = self.root_to_leaf_paths(clf.tree_, 0)
         arms_y = np.arange(3, 10)
         arms = list(product(arms_z, arms_y))
 
