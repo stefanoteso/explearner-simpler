@@ -13,8 +13,5 @@ from .banknote import *
 from . import breast
 from .breast import *
 
-from . import heart
-from .heart import *
-
 from . import wine
 from .wine import *
