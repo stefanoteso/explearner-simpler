@@ -57,6 +57,12 @@ class Dataset(ABC):
         (x[i], z[i], y[i])."""
         pass
 
+    #TODO: To be added for easier testing
+#     @abstractmethod
+#     def get_default_kernels():
+#         """Return a triple of kernels for X,Z, and y."""
+#         pass
+
     def regret(self, i, zhat, yhat):
         """Regret of (x[i], zhat, yhat) given that the best arm is
         (x[i], z[i], y[i])."""
@@ -148,11 +154,10 @@ class EqKendallRewardMixin:
 
 
 class TreeDataset(Dataset):
-
-    def root_to_leaf_paths(self, tree, node_id):
+    
+    def _paths(self, tree, node_id, all_paths):
         """
-        Finds all root-to-leaf paths in a decision tree.
-        Returns: All paths from root-to-leaf
+        Tree paths. 
         """
         if tree.children_left[node_id] == tree.children_right[node_id]:
             # The node is a leaf
@@ -162,6 +167,10 @@ class TreeDataset(Dataset):
         else:
             # Recursively scan left and right children
             paths = []
+            if all_paths: 
+                path = np.zeros(tree.node_count)
+                path[node_id] = 1
+                paths.append(path)
             left_paths = self.root_to_leaf_paths(tree, tree.children_left[node_id])
             for path in left_paths:
                 path[node_id] = 1
@@ -171,3 +180,17 @@ class TreeDataset(Dataset):
                 path[node_id] = 1
                 paths.append(path)
             return paths
+
+    def all_paths(self, tree, node_id):
+        """
+        Finds all paths in a decision tree.
+        Returns: All paths in the tree
+        """
+        return self._paths(tree, node_id, True)
+        
+    def root_to_leaf_paths(self, tree, node_id):
+        """
+        Finds all root-to-leaf paths in a decision tree.
+        Returns: All paths from root-to-leaf
+        """
+        return self._paths(tree, node_id, False)
