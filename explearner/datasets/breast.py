@@ -20,7 +20,7 @@ class BreastCancer(EqKendallRewardMixin, Dataset):
     def __init__(self, **kwargs):
         # Samples per class	212(M),357(B)
         dataset = load_breast_cancer()
-        pca_dim = 10
+        pca_dim = 8
 
         # Data
         X = dataset.data

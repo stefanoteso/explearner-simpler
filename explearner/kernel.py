@@ -92,6 +92,10 @@ class KendallKernel(GenericKernelMixin, Kernel):
 
        where C,D is the number of concordant and discordant pairs, respectively.
     """
+    def __init__(self):
+        super(GenericKernelMixin, self).__init__()
+    
+    
     #TODO: Gradient?
     def __call__(self, X, Y=None, eval_gradient=False):
         K = kendall_tau_dist(X, Y)

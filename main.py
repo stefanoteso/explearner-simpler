@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.utils import check_random_state
 from itertools import product
 from os.path import join
+from tqdm import tqdm
 
 from explearner import *
 
@@ -57,7 +58,7 @@ def evaluate_iter(dataset, gp, i, ts):
         test_regrets.append(dataset.regret(j, zhat, yhat))
     test_regret = np.mean(test_regrets)
 
-    print(f'iter: best reg={pred_regret:5.3f} test reg={test_regret:5.3f}  ctx {i}  true=({dataset.Z[i]}, {dataset.y[i]}) pred=({zbest}, {ybest})')
+#     print(f'iter: best reg={pred_regret:5.3f} test reg={test_regret:5.3f}  ctx {i}  true=({dataset.Z[i]}, {dataset.y[i]}) pred=({zbest}, {ybest})')
 
     return pred_regret, test_regret
 
@@ -110,7 +111,7 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
     print(f'running fold:  #arms={len(dataset.arms)} - #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
     trace = [evaluate_iter(dataset, gp, i, ts)]
-    for t in range(n_iters):
+    for t in tqdm(range(n_iters)):
 
         # Fit the GP on the observed data
         gp.fit(np.array(observed_X),

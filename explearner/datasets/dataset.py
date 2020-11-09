@@ -150,7 +150,7 @@ class EqKendallRewardMixin:
     def reward(self, i, zhat, yhat, noise=0):
         z, y = self.Z[i], self.y[i]
         sign = 1 if y == yhat else -1
-        return sign * (kendall_tau_dist(z, zhat)) + self.rng.normal(0, noise)
+        return sign * (1 - kendall_tau_dist(z, zhat)) + self.rng.normal(0, noise)
 
 
 class TreeDataset(Dataset):
