@@ -51,6 +51,14 @@ def merge_sort(arr):
 
     return inv_count, result
 
+# Not the best code
+def kendall_tau_dist_vec(X, Y):
+    n = X.shape[0]
+    dist = np.zeros((n, n))
+    for i in np.arange(n):
+        for j in np.arange(n):
+            dist[i, j] = kendall_tau_dist(X[i], Y[j])
+    return dist
 
 def kendall_tau_dist(x, y):
     """
@@ -96,7 +104,6 @@ def rank_items(array):
     The array of rankings
 
     """
-
     temp = array.argsort()
     ranks = np.empty_like(temp)
     ranks[temp] = np.arange(len(array))

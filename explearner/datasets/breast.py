@@ -41,8 +41,8 @@ class BreastCancer(EqKendallRewardMixin, Dataset):
 
         # Kernels
         kx = RBF(length_scale=1, length_scale_bounds=(1, 1))
-        kz = KendallKernel()  # ranking kernels
-        ky = DotProduct(sigma_0=1, sigma_0_bounds=(1, 1))
+        kz = KendallKernel()  # ranking kernels - TODO:Debug
+        ky = RBF(length_scale=1, length_scale_bounds=(1, 1))
 
         # The space of explanations is all possible permutations!
         # TODO: Improve efficiency by excluding some permutation

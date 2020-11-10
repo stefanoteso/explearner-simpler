@@ -1,7 +1,7 @@
 import numpy as np
-from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin, Kernel
+from sklearn.gaussian_process.kernels import CompoundKernel, GenericKernelMixin, Kernel, Hyperparameter
 
-from explearner import kendall_tau_dist
+from explearner import kendall_tau_dist, kendall_tau_dist_vec
 
 
 class CombinerKernel(GenericKernelMixin, CompoundKernel):
@@ -92,15 +92,27 @@ class KendallKernel(GenericKernelMixin, Kernel):
 
        where C,D is the number of concordant and discordant pairs, respectively.
     """
-    def __init__(self):
-        super(GenericKernelMixin, self).__init__()
-    
-    
+    def __init__(self, noise=1, noise_bounds=(1, 1)):
+        self.noise = noise
+        self.noise_bounds = noise_bounds
+
+    @property
+    def hyperparameter_noise(self):
+        return Hyperparameter("noise", "numeric", self.noise_bounds)
+
     #TODO: Gradient?
     def __call__(self, X, Y=None, eval_gradient=False):
-        K = kendall_tau_dist(X, Y)
+        X = np.atleast_2d(X)
+        n = X.shape[0]
+        if Y is None:
+            K = np.eye(n)
+        else:
+            K = 1 - kendall_tau_dist_vec(X, Y)
+            if eval_gradient:
+                raise ValueError(
+                    "Gradient can only be evaluated when Y is None.")
         if eval_gradient:
-            return 1, K
+            return K, np.empty((n, n, 0))
         else:
             return K
 
