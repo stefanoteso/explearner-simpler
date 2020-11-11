@@ -102,7 +102,7 @@ class Dataset(ABC):
         means = clf.cv_results_['mean_test_score']
         stds = clf.cv_results_['std_test_score']
         for mean, std, params in zip(means, stds, clf.cv_results_['params']):
-            print(f'{mean:0.3f} ± {2 * std:0.3f} for {params}')
+            print(f'{mean:0.3f} +/- {2 * std:0.3f} for {params}')
 
         return clf.best_estimator_
 
