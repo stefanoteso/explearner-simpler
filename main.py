@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.utils import check_random_state
 from itertools import product
 from os.path import join
-from tqdm import tqdm
+from tqdm import trange
 
 from explearner import *
 
@@ -57,7 +57,7 @@ def evaluate_iter(dataset, gp, i, ts):
         zhat, yhat = gp.predict_arm(dataset, dataset.X[j])
         test_regrets.append(dataset.regret(j, zhat, yhat))
     test_regret = np.mean(test_regrets)
-
+    # DM: Print the
 #     print(f'iter: best reg={pred_regret:5.3f} test reg={test_regret:5.3f}  ctx {i}  true=({dataset.Z[i]}, {dataset.y[i]}) pred=({zbest}, {ybest})')
 
     return pred_regret, test_regret
@@ -111,45 +111,55 @@ def evaluate_fold(dataset, tr, ts, args, rng=None):
     print(f'running fold:  #arms={len(dataset.arms)} - #kn={len(observed_f)} #tr={len(tr)} #ts={len(ts)}')
 
     trace = [evaluate_iter(dataset, gp, i, ts)]
-    for t in tqdm(range(n_iters)):
+    with trange(n_iters) as tq:
+        # for i in t:
+        #     # Description will be displayed on the left
+        #     t.set_description('GEN %i' % i)
+        #     # Postfix will be displayed on the right,
+        #     # formatted automatically based on argument's datatype
+        #     t.set_postfix(loss=random(), gen=randint(1, 999), str='h',
+        #                   lst=[1, 2])
+        #     sleep(0.1)
+        for t in tq:
+            # Fit the GP on the observed data
+            gp.fit(np.array(observed_X),
+                   np.array(observed_Z),
+                   np.array(observed_y),
+                   np.array(observed_f))
 
-        # Fit the GP on the observed data
-        gp.fit(np.array(observed_X),
-               np.array(observed_Z),
-               np.array(observed_y),
-               np.array(observed_f))
+            # XXX DEBUG
+            if args.passive:
+                from pprint import pprint
+                pprint(list(zip(observed_X, observed_Z, observed_y, observed_f)))
+                for i, arm in product(range(len(dataset.X)), dataset.arms):
+                    x = dataset.X[i]
+                    z = arm[0]
+                    y = arm[1]
+                    tempx = x.reshape((1, -1))
+                    tempz = z.reshape((1, -1))
+                    tempy = np.array([y])
+                    print(f'reward @ ({x}, {z}, {y}): true={dataset.reward(i, z, y):7.4f} pred={gp.predict(tempx, tempz, tempy)[0]:7.4f}')
+                quit()
 
-        # XXX DEBUG
-        if args.passive:
-            from pprint import pprint
-            pprint(list(zip(observed_X, observed_Z, observed_y, observed_f)))
-            for i, arm in product(range(len(dataset.X)), dataset.arms):
-                x = dataset.X[i]
-                z = arm[0]
-                y = arm[1]
-                tempx = x.reshape((1, -1))
-                tempz = z.reshape((1, -1))
-                tempy = np.array([y])
-                print(f'reward @ ({x}, {z}, {y}): true={dataset.reward(i, z, y):7.4f} pred={gp.predict(tempx, tempz, tempy)[0]:7.4f}')
-            quit()
+            # Select a context
+            i = rng.choice(tr)
 
-        # Select a context
-        i = rng.choice(tr)
+            # Select a query arm and observe the reward
+            # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
+            beta = 2 * np.log(Xsize * ((t + 1) ** 2) * (np.pi ** 2) / (6 * delta))
+            xhat = dataset.X[i]
+            zhat, yhat = gp.select_arm(dataset, xhat, beta=1)
+            fhat = dataset.reward(i, zhat, yhat, noise=args.noise)
 
-        # Select a query arm and observe the reward
-        # XXX beta = 2*B**2 + 300*gamma*np.log(t / delta)**3
-        beta = 2 * np.log(Xsize * ((t + 1) ** 2) * (np.pi ** 2) / (6 * delta))
-        xhat = dataset.X[i]
-        zhat, yhat = gp.select_arm(dataset, xhat, beta=1)
-        fhat = dataset.reward(i, zhat, yhat, noise=args.noise)
+            # Update the set of observations
+            observed_X.append(xhat)
+            observed_Z.append(zhat)
+            observed_y.append(yhat)
+            observed_f.append(fhat)
 
-        # Update the set of observations
-        observed_X.append(xhat)
-        observed_Z.append(zhat)
-        observed_y.append(yhat)
-        observed_f.append(fhat)
-
-        trace.append(evaluate_iter(dataset, gp, i, ts))
+            pred_regret, test_regret = evaluate_iter(dataset, gp, i, ts)
+            tq.set_postfix(regret=str(np.around(pred_regret, decimals=5)))
+            trace.append((pred_regret, test_regret))
 
     return trace
 
@@ -201,7 +211,7 @@ def main():
 
     args = parser.parse_args()
 
-    #np.seterr(all='warn') # XXX the RBF kernel underflows often
+    np.seterr(all='ignore') # XXX the RBF kernel underflows often
     np.set_printoptions(precision=3, linewidth=80)
 
     np.random.seed(args.seed) # XXX just in case
@@ -219,6 +229,10 @@ def main():
 
 
 if __name__ == '__main__':
+    def warn(*args, **kwargs):
+        pass
+    import warnings
+    warnings.warn = warn
     main()
 
 
