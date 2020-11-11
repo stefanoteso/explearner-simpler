@@ -50,9 +50,11 @@ def draw(args, traces, traces_args):
                     label=label, color=color, linestyle=linestyle)
             ax.fill_between(x, y - yerr, y + yerr,
                             alpha=0.35, linewidth=0, color=color)
+        handles, labels = ax.get_legend_handles_labels()
+        labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
 
-        ax.legend(loc='upper right', fontsize=8, shadow=False)
-        fig.savefig(args.basename + '__{}.png'.format(j),
+        ax.legend(handles, labels, loc='upper right', fontsize=8, shadow=False)
+        fig.savefig(args.basename + '__{}.pdf'.format(j),
                     bbox_inches='tight',
                     pad_inches=0)
         del fig
